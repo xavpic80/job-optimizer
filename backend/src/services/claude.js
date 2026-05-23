@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  JOB_PARSE_PROMPT,
   CV_OPTIMIZATION_PROMPT,
   COVER_LETTER_PROMPT,
   INTERVIEW_PREP_PROMPT,
@@ -20,6 +21,9 @@ const callClaude = async (systemPrompt, userContent, maxTokens = 2000) => {
   });
   return JSON.parse(response.content[0].text);
 };
+
+export const parseJobContent = (rawText) =>
+  callClaude(JOB_PARSE_PROMPT, rawText.slice(0, 12000), 1500);
 
 export const optimizeCV = (jobDescription, userCV) =>
   callClaude(

@@ -1,3 +1,29 @@
+export const JOB_PARSE_PROMPT = `You are extracting structured job posting data from raw text that may contain web page noise (navigation, iframes, cookie banners, "Apply" buttons, breadcrumbs, etc).
+
+Extract ONLY the actual job posting content. Ignore all navigation, UI, and boilerplate text.
+
+Rules:
+- title: the exact job title/role (e.g. "Senior Product Manager")
+- company: the hiring company name (not a job board name)
+- location: city/country or "Remote" — null if not found
+- description: clean, readable job description. Remove HTML artifacts and navigation noise. Keep all role details, responsibilities, qualifications.
+- requirements: a clean summary of required qualifications (can be empty string)
+- salary: salary range as a string if mentioned, otherwise null
+- remote_type: "remote", "hybrid", or "onsite"
+- job_type: "full-time", "part-time", "contract", or null
+
+Return ONLY valid JSON (no markdown, no code blocks):
+{
+  "title": string,
+  "company": string,
+  "location": string | null,
+  "description": string,
+  "requirements": string,
+  "salary": string | null,
+  "remote_type": "remote" | "hybrid" | "onsite",
+  "job_type": "full-time" | "part-time" | "contract" | null
+}`;
+
 export const CV_OPTIMIZATION_PROMPT = `You are an expert career coach specializing in tailoring CVs for specific job roles.
 
 Given a user's CV and a target job description, analyze the alignment and provide:

@@ -27,7 +27,7 @@ export const parseJob = async (req, res) => {
         jobData = await scrapeGeneric(input);
       }
     } else {
-      jobData = parseRawJobText(input);
+      jobData = await parseRawJobText(input);
     }
   } catch (err) {
     return res.status(422).json({ error: err.message });
