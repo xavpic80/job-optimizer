@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Mail, Phone, Video, Plus, X, Trash2, FileText, Loader } from 'lucide-react';
+import { Mail, Phone, Video, MessageSquare, Plus, X, Trash2, FileText, Loader } from 'lucide-react';
 import api from '../api/client.js';
 
 const COMM_TYPES = [
   { value: 'email', label: 'Email', icon: Mail },
   { value: 'phone_call', label: 'Phone Call', icon: Phone },
   { value: 'video_call', label: 'Video Call', icon: Video },
+  { value: 'text', label: 'Text', icon: MessageSquare },
 ];
 
 const INTERVIEW_TYPES = [
