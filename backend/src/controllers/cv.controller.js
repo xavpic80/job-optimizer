@@ -1,4 +1,20 @@
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import supabase from '../lib/supabase.js';
+
+export const parsePDF = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No PDF file uploaded' });
+  if (req.file.mimetype !== 'application/pdf') {
+    return res.status(400).json({ error: 'File must be a PDF' });
+  }
+  try {
+    const data = await pdfParse(req.file.buffer);
+    const text = data.text.replace(/\n{3,}/g, '\n\n').trim();
+    if (!text) return res.status(422).json({ error: 'Could not extract text from PDF' });
+    res.json({ text, pages: data.numpages });
+  } catch (err) {
+    res.status(422).json({ error: 'Failed to parse PDF: ' + err.message });
+  }
+};
 
 export const saveCV = async (req, res) => {
   const { cvText } = req.body;
