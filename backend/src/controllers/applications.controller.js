@@ -197,6 +197,30 @@ export const meetingPrep = async (req, res) => {
     ? `Name: ${contact.first_name} ${contact.last_name}\nRole: ${contact.role ?? 'Unknown'}\nLinkedIn: ${contact.linkedin_url ?? 'Not provided'}`
     : '(No specific contact selected — prep for the meeting generically)';
 
+  // Format the stored AI background into readable text for Claude
+  const formatAiBackground = (bg) => {
+    if (!bg) return null;
+    const lines = [];
+    if (bg.summary) lines.push(`Summary: ${bg.summary}`);
+    if (bg.careerHighlights?.length > 0) {
+      lines.push('Career Highlights:');
+      bg.careerHighlights.forEach((h) => lines.push(`  - ${h.highlight} (source: ${h.source})`));
+    }
+    if (bg.expertise?.length > 0) lines.push(`Areas of Expertise: ${bg.expertise.join(', ')}`);
+    if (bg.connectionPoints?.length > 0) {
+      lines.push('Potential Connection Points:');
+      bg.connectionPoints.forEach((p) => lines.push(`  - ${p}`));
+    }
+    if (bg.recentActivity?.length > 0) {
+      lines.push('Recent Activity:');
+      bg.recentActivity.forEach((a) => lines.push(`  - ${a.item} (source: ${a.source})`));
+    }
+    if (bg.disclaimer) lines.push(`Note: ${bg.disclaimer}`);
+    return lines.join('\n');
+  };
+
+  const aiBackgroundText = contact?.ai_background ? formatAiBackground(contact.ai_background) : null;
+
   const commsText = app.communications?.length > 0
     ? app.communications.map((c) =>
         `[${(c.type ?? 'communication').replace('_', ' ')} · ${new Date(c.date_sent).toLocaleDateString()}]\n${c.notes || c.body || ''}`
@@ -217,7 +241,8 @@ export const meetingPrep = async (req, res) => {
       contactResearch.join('\n\n') || null,
       commsText,
       transcriptsText,
-      mpProfileAssets
+      mpProfileAssets,
+      aiBackgroundText
     );
     res.json(result);
   } catch (err) {

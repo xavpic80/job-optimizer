@@ -89,11 +89,11 @@ export const scoreMatch = (jobDescription, userCV) =>
     500
   );
 
-export const generateMeetingPrep = (jobDescription, userCV, contactInfo, contactResearch, communications, transcripts, profileAssets = null) =>
+export const generateMeetingPrep = (jobDescription, userCV, contactInfo, contactResearch, communications, transcripts, profileAssets = null, aiBackground = null) =>
   callClaude(
     MEETING_PREP_PROMPT,
     withAssets(
-      `CANDIDATE CV:\n${userCV || '(Not provided)'}\n\n---\n\nJOB DESCRIPTION:\n${jobDescription.slice(0, 4000)}\n\n---\n\nCONTACT:\n${contactInfo}\n\n---\n\nCONTACT RESEARCH:\n${contactResearch || '(No data found)'}\n\n---\n\nPREVIOUS COMMUNICATIONS:\n${communications || '(None)'}\n\n---\n\nPREVIOUS TRANSCRIPTS:\n${transcripts || '(None)'}`,
+      `CANDIDATE CV:\n${userCV || '(Not provided)'}\n\n---\n\nJOB DESCRIPTION:\n${jobDescription.slice(0, 4000)}\n\n---\n\nCONTACT:\n${contactInfo}\n\n---\n\nCONTACT AI BACKGROUND:\n${aiBackground || '(Not generated yet — use web research below)'}\n\n---\n\nCONTACT RESEARCH (live web snippets):\n${contactResearch || '(No data found)'}\n\n---\n\nPREVIOUS COMMUNICATIONS:\n${communications || '(None)'}\n\n---\n\nPREVIOUS TRANSCRIPTS:\n${transcripts || '(None)'}`,
       profileAssets
     ),
     2500

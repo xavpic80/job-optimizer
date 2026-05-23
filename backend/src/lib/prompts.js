@@ -142,6 +142,7 @@ You receive:
 - PREVIOUS COMMUNICATIONS (logged emails, calls, video calls)
 - PREVIOUS TRANSCRIPTS (prior interview notes)
 - ADDITIONAL PROFILE ASSETS: portfolio, certifications, recommendations (may be empty)
+- CONTACT AI BACKGROUND: pre-researched profile summary with cited sources (may be empty — use it to enrich insights when present)
 
 Rules:
 - Be specific and actionable. Generic advice is useless.
