@@ -54,7 +54,7 @@ export const listApplications = async (req, res) => {
 export const getApplication = async (req, res) => {
   const { data: app, error } = await supabase
     .from('applications')
-    .select(`*, jobs(*), contacts(*), communications(*, contacts(*)), transcripts(*, coaching_insights(*))`)
+    .select(`*, jobs(*), communications(*), transcripts(*, coaching_insights(*))`)
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
     .single();

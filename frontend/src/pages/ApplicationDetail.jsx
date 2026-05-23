@@ -226,7 +226,6 @@ export default function ApplicationDetail() {
         {tab === 'Communications' && (
           <CommunicationsTab
             appId={id}
-            initialContacts={app.contacts ?? []}
             initialCommunications={app.communications ?? []}
           />
         )}

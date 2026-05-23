@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, Phone, Video, Linkedin, Plus, X, Trash2, User, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Phone, Video, Plus, X, Trash2, User, ExternalLink } from 'lucide-react';
 import api from '../api/client.js';
 
 const COMM_TYPES = [
@@ -72,9 +72,15 @@ function CommCard({ comm, contacts }) {
   );
 }
 
-export default function CommunicationsTab({ appId, initialContacts = [], initialCommunications = [] }) {
-  const [contacts, setContacts] = useState(initialContacts);
+export default function CommunicationsTab({ appId, initialCommunications = [] }) {
+  const [contacts, setContacts] = useState([]);
   const [communications, setCommunications] = useState(initialCommunications);
+
+  useEffect(() => {
+    api.get(`/api/applications/${appId}/contacts`)
+      .then(setContacts)
+      .catch(() => setContacts([]));
+  }, [appId]);
 
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactForm, setContactForm] = useState({ firstName: '', lastName: '', role: '', linkedinUrl: '' });
