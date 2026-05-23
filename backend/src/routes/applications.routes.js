@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   createApplication, listApplications, getApplication,
-  updateApplication, deleteApplication, fitAssessment,
+  updateApplication, deleteApplication, fitAssessment, meetingPrep,
 } from '../controllers/applications.controller.js';
 import {
   createCommunication, listCommunications,
@@ -24,6 +24,7 @@ router.patch('/:id', updateApplication);
 router.delete('/:id', deleteApplication);
 
 router.post('/:id/fit-assessment', fitAssessment);
+router.post('/:id/meeting-prep', meetingPrep);
 
 router.get('/:id/contacts', listContacts);
 router.post('/:id/contacts', createContact);

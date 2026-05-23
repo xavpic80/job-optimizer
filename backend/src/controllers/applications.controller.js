@@ -1,6 +1,6 @@
 import supabase from '../lib/supabase.js';
-import { assessFit } from '../services/claude.js';
-import { researchCompany } from '../services/research.js';
+import { assessFit, generateMeetingPrep } from '../services/claude.js';
+import { researchCompany, researchContact } from '../services/research.js';
 
 export const createApplication = async (req, res) => {
   const { jobId, status = 'saved', notes = '' } = req.body;
@@ -126,6 +126,84 @@ export const fitAssessment = async (req, res) => {
 
   try {
     const result = await assessFit(job.description, userCV, newsText, openingsText);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const meetingPrep = async (req, res) => {
+  const { contactId } = req.body;
+  const userId = req.user.id;
+
+  const [{ data: app }, { data: cvData }] = await Promise.all([
+    supabase
+      .from('applications')
+      .select('*, jobs(*), communications(*), transcripts(*)')
+      .eq('id', req.params.id)
+      .eq('user_id', userId)
+      .single(),
+    supabase
+      .from('cv_versions')
+      .select('cv_text')
+      .eq('user_id', userId)
+      .eq('is_current', true)
+      .single(),
+  ]);
+
+  if (!app) return res.status(404).json({ error: 'Application not found' });
+
+  const job = app.jobs;
+  const userCV = cvData?.cv_text ?? '';
+
+  // Fetch selected contact (optional)
+  let contact = null;
+  if (contactId) {
+    const { data } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
+      .eq('user_id', userId)
+      .single();
+    contact = data;
+  }
+
+  // Research the contact online
+  let contactResearch = [];
+  if (contact) {
+    contactResearch = await researchContact(
+      contact.first_name,
+      contact.last_name,
+      job.company,
+      contact.role
+    );
+  }
+
+  const contactInfo = contact
+    ? `Name: ${contact.first_name} ${contact.last_name}\nRole: ${contact.role ?? 'Unknown'}\nLinkedIn: ${contact.linkedin_url ?? 'Not provided'}`
+    : '(No specific contact selected — prep for the meeting generically)';
+
+  const commsText = app.communications?.length > 0
+    ? app.communications.map((c) =>
+        `[${(c.type ?? 'communication').replace('_', ' ')} · ${new Date(c.date_sent).toLocaleDateString()}]\n${c.notes || c.body || ''}`
+      ).join('\n\n')
+    : null;
+
+  const transcriptsText = app.transcripts?.length > 0
+    ? app.transcripts.map((t) =>
+        `[Interview · ${new Date(t.interview_date).toLocaleDateString()}]\n${t.transcript_text}`
+      ).join('\n\n---\n\n')
+    : null;
+
+  try {
+    const result = await generateMeetingPrep(
+      job.description,
+      userCV,
+      contactInfo,
+      contactResearch.join('\n\n') || null,
+      commsText,
+      transcriptsText
+    );
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

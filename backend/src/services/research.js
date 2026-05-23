@@ -27,6 +27,18 @@ const searchDDG = async (query, maxResults = 5) => {
   }
 };
 
+export const researchContact = async (firstName, lastName, company, role) => {
+  const queries = [
+    `"${firstName} ${lastName}" "${company}"`,
+    `"${firstName} ${lastName}" ${role ?? ''} ${company}`.trim(),
+  ];
+  const results = await Promise.allSettled(queries.map((q) => searchDDG(q, 4)));
+  const combined = results
+    .filter((r) => r.status === 'fulfilled')
+    .flatMap((r) => r.value);
+  return [...new Set(combined)];
+};
+
 export const researchCompany = async (companyName) => {
   const [news, jobs] = await Promise.allSettled([
     searchDDG(`"${companyName}" news 2025`, 5),

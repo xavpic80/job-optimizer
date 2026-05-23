@@ -7,6 +7,7 @@ import {
 import api from '../api/client.js';
 import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
 import CommunicationsTab from '../components/CommunicationsTab.jsx';
+import MeetingPrepTab from '../components/MeetingPrepTab.jsx';
 
 const STATUS_OPTIONS = [
   'saved', 'applied', 'screening', 'interview_scheduled',
@@ -19,7 +20,7 @@ const STATUS_LABELS = {
   final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
 };
 
-const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Communications', 'Transcripts'];
+const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Communications', 'Meeting Prep', 'Transcripts'];
 
 export default function ApplicationDetail() {
   const { id } = useParams();
@@ -228,6 +229,10 @@ export default function ApplicationDetail() {
             appId={id}
             initialCommunications={app.communications ?? []}
           />
+        )}
+
+        {tab === 'Meeting Prep' && (
+          <MeetingPrepTab appId={id} />
         )}
 
         {tab === 'Transcripts' && (
