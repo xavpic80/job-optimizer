@@ -97,7 +97,6 @@ export const deleteContact = async (req, res) => {
 
 export const uploadLinkedinPdf = async (req, res) => {
   const { id: appId, contactId } = req.params;
-  if (!req.file) return res.status(400).json({ error: 'No PDF uploaded' });
 
   const { data: contact } = await supabase
     .from('contacts')
@@ -106,6 +105,25 @@ export const uploadLinkedinPdf = async (req, res) => {
     .eq('user_id', req.user.id)
     .single();
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
+
+  // --- Mode 1: plain-text paste (JSON body, no file) ---
+  if (!req.file && req.body?.linkedinText) {
+    const text = String(req.body.linkedinText).trim();
+    if (!text) return res.status(400).json({ error: 'linkedinText is empty' });
+
+    const { data: updated, error } = await supabase
+      .from('contacts')
+      .update({ linkedin_pdf_text: text, linkedin_pdf_path: null, updated_at: new Date().toISOString() })
+      .eq('id', contactId)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ success: true, contact: updated });
+  }
+
+  // --- Mode 2: PDF file upload ---
+  if (!req.file) return res.status(400).json({ error: 'No PDF or text provided' });
 
   try {
     const pdfData = await pdfParse(req.file.buffer);

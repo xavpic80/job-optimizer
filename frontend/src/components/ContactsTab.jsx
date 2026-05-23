@@ -17,16 +17,29 @@ const ASSET_TYPE_COLORS = {
   other: 'text-slate-400',
 };
 
+const MAX_PDF_BYTES = 4 * 1024 * 1024; // 4 MB — Vercel Hobby plan cap is 4.5 MB
+
 function ContactCard({ contact, appId, onUpdate, onDelete }) {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [generatingBg, setGeneratingBg] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
   const [error, setError] = useState('');
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [linkedinText, setLinkedinText] = useState('');
+  const [savingText, setSavingText] = useState(false);
   const fileInputRef = useRef(null);
 
   const uploadLinkedinPdf = async (file) => {
     if (!file || file.type !== 'application/pdf') {
       setError('Please select a PDF file');
+      return;
+    }
+    if (file.size > MAX_PDF_BYTES) {
+      setError(
+        `PDF is ${(file.size / 1024 / 1024).toFixed(1)} MB — too large for upload (4 MB limit). ` +
+        `Use "Paste text" instead: open your LinkedIn PDF, select all, copy, and paste below.`
+      );
+      setShowTextInput(true);
       return;
     }
     setUploadingPdf(true);
@@ -36,14 +49,39 @@ function ContactCard({ contact, appId, onUpdate, onDelete }) {
     try {
       const { contact: updated } = await api.post(
         `/api/applications/${appId}/contacts/${contact.id}/linkedin-pdf`,
-        form,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        form
       );
       onUpdate(updated);
     } catch (err) {
-      setError(err.error ?? 'Failed to upload PDF');
+      const msg = err.error ?? 'Failed to upload PDF';
+      // Surface the size-limit hint if the server also rejected with 413
+      if (msg.includes('413') || msg.toLowerCase().includes('large') || msg.toLowerCase().includes('payload')) {
+        setError('File too large for upload. Use "Paste text" instead.');
+        setShowTextInput(true);
+      } else {
+        setError(msg);
+      }
     } finally {
       setUploadingPdf(false);
+    }
+  };
+
+  const saveLinkedinText = async () => {
+    if (!linkedinText.trim()) return;
+    setSavingText(true);
+    setError('');
+    try {
+      const { contact: updated } = await api.post(
+        `/api/applications/${appId}/contacts/${contact.id}/linkedin-pdf`,
+        { linkedinText }
+      );
+      onUpdate(updated);
+      setShowTextInput(false);
+      setLinkedinText('');
+    } catch (err) {
+      setError(err.error ?? 'Failed to save');
+    } finally {
+      setSavingText(false);
     }
   };
 
@@ -89,7 +127,7 @@ function ContactCard({ contact, appId, onUpdate, onDelete }) {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-          {/* LinkedIn PDF upload */}
+          {/* LinkedIn PDF upload / paste */}
           <input
             ref={fileInputRef}
             type="file"
@@ -99,14 +137,21 @@ function ContactCard({ contact, appId, onUpdate, onDelete }) {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingPdf}
-            title={contact.linkedin_pdf_text ? 'Replace LinkedIn PDF export' : 'Upload LinkedIn PDF export'}
+            disabled={uploadingPdf || savingText}
+            title={contact.linkedin_pdf_text ? 'Replace LinkedIn PDF export' : 'Upload LinkedIn PDF export (max 4 MB)'}
             className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-50 border border-slate-700 rounded px-2 py-1"
           >
             {uploadingPdf
               ? <Loader className="w-3.5 h-3.5 animate-spin" />
               : <FileText className="w-3.5 h-3.5" />}
             {contact.linkedin_pdf_text ? 'PDF ✓' : 'LinkedIn PDF'}
+          </button>
+          <button
+            onClick={() => setShowTextInput((v) => !v)}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors border border-slate-700 rounded px-2 py-1"
+            title="Paste LinkedIn profile text instead (for large PDFs)"
+          >
+            Paste text
           </button>
 
           {/* AI Background */}
@@ -130,6 +175,37 @@ function ContactCard({ contact, appId, onUpdate, onDelete }) {
           </button>
         </div>
       </div>
+
+      {/* Paste LinkedIn text panel */}
+      {showTextInput && (
+        <div className="border-t border-slate-800 p-4 space-y-2">
+          <p className="text-xs text-slate-400">
+            Open your LinkedIn PDF, select all text (Cmd/Ctrl+A), copy (Cmd/Ctrl+C), and paste below.
+          </p>
+          <textarea
+            value={linkedinText}
+            onChange={(e) => setLinkedinText(e.target.value)}
+            placeholder="Paste LinkedIn profile text here…"
+            rows={5}
+            className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none font-mono"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={saveLinkedinText}
+              disabled={savingText || !linkedinText.trim()}
+              className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg text-xs font-medium hover:bg-cyan-400 disabled:opacity-50 transition-colors"
+            >
+              {savingText ? 'Saving…' : 'Save Profile Text'}
+            </button>
+            <button
+              onClick={() => { setShowTextInput(false); setLinkedinText(''); setError(''); }}
+              className="text-xs text-slate-500 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* AI Background panel */}
       {bg && (
