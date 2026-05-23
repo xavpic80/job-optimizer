@@ -194,7 +194,7 @@ export const meetingPrep = async (req, res) => {
   }
 
   const contactInfo = contact
-    ? `Name: ${contact.first_name} ${contact.last_name}\nRole: ${contact.role ?? 'Unknown'}\nLinkedIn: ${contact.linkedin_url ?? 'Not provided'}`
+    ? `Name: ${contact.first_name} ${contact.last_name}\nRole: ${contact.role ?? 'Unknown'}\nCompany: ${job.company ?? 'Unknown'}\nLinkedIn: ${contact.linkedin_url ?? 'Not provided'}`
     : '(No specific contact selected — prep for the meeting generically)';
 
   // Format the stored AI background into readable text for Claude

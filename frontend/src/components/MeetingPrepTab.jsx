@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   CalendarCheck, Loader, RefreshCw, MessageSquare, HelpCircle,
-  TrendingUp, AlertCircle, User, Target, Info, ChevronDown, ChevronUp,
+  TrendingUp, AlertCircle, Target, Info, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import api from '../api/client.js';
 
@@ -86,6 +86,12 @@ export default function MeetingPrepTab({ appId }) {
 
   const selectedContact = contacts.find((c) => c.id === contactId);
 
+  // Detect when AI Background was generated after the last prep run → stale
+  const hasBg = !!selectedContact?.ai_background;
+  const bgAt = selectedContact?.ai_background_at;
+  const prepIsStale = hasBg && prepAt && bgAt && new Date(bgAt) > new Date(prepAt);
+  const bgNeverUsed = hasBg && !prepAt; // bg exists but no prep yet
+
   return (
     <div className="space-y-4">
       {/* Contact selector */}
@@ -93,7 +99,7 @@ export default function MeetingPrepTab({ appId }) {
         <label className="text-xs text-slate-400 block mb-2">Who are you meeting with?</label>
         {contacts.length === 0 ? (
           <p className="text-sm text-slate-500">
-            No contacts yet — add contacts in the <span className="text-cyan-400">Communications</span> tab first.
+            No contacts yet — add contacts in the <span className="text-cyan-400">Contacts</span> tab first.
           </p>
         ) : (
           <select
@@ -105,16 +111,53 @@ export default function MeetingPrepTab({ appId }) {
             {contacts.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.first_name} {c.last_name}{c.role ? ` · ${c.role}` : ''}
+                {c.ai_background ? ' ✦' : ''}
               </option>
             ))}
           </select>
         )}
-        {selectedContact?.linkedin_url && (
-          <p className="text-xs text-slate-500 mt-2">
-            LinkedIn: <a href={selectedContact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">{selectedContact.linkedin_url}</a>
-          </p>
+        {selectedContact && (
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            {selectedContact.linkedin_url && (
+              <p className="text-xs text-slate-500">
+                LinkedIn: <a href={selectedContact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">{selectedContact.linkedin_url}</a>
+              </p>
+            )}
+            {hasBg ? (
+              <span className="text-xs text-purple-400 flex items-center gap-1">
+                ✦ AI Background ready
+                {bgAt && <span className="text-slate-600">· {new Date(bgAt).toLocaleDateString()}</span>}
+              </span>
+            ) : (
+              <span className="text-xs text-slate-600">No AI Background — generate one in the Contacts tab for richer prep</span>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Stale-prep banner */}
+      {(prepIsStale || bgNeverUsed) && !loading && (
+        <div className="flex items-start gap-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-purple-300 font-medium">
+              {prepIsStale
+                ? 'AI Background was updated after this prep was generated'
+                : 'AI Background is ready — not yet included in this prep'}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Regenerate to include {selectedContact?.first_name}'s full AI-researched profile in the prep.
+            </p>
+          </div>
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="text-xs text-purple-400 hover:text-purple-300 font-medium flex-shrink-0 disabled:opacity-50"
+          >
+            Regenerate →
+          </button>
+        </div>
+      )}
 
       {/* CTA */}
       {!prep && (
