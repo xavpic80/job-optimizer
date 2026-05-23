@@ -12,7 +12,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (res) => res.data,
-  (err) => Promise.reject(err.response?.data ?? err)
+  (err) => {
+    const data = err.response?.data;
+    const message =
+      typeof data === 'string' ? data
+      : typeof data?.error === 'string' ? data.error
+      : typeof data?.message === 'string' ? data.message
+      : err.message ?? 'Request failed';
+    return Promise.reject({ error: message });
+  }
 );
 
 export default api;
