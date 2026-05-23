@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, TrendingUp, AlertCircle, Globe, Briefcase, CheckCircle, Loader, RefreshCw } from 'lucide-react';
 import api from '../api/client.js';
+
+const cacheKey = (appId) => `fit_assessment_${appId}`;
 
 const TYPE_COLORS = {
   news: 'text-blue-300',
@@ -28,15 +30,30 @@ function ScoreRing({ score }) {
 
 export default function FitAssessmentTab({ appId, job, existingScore }) {
   const [assessment, setAssessment] = useState(null);
+  const [assessedAt, setAssessedAt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(cacheKey(appId));
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        setAssessment(data);
+        setAssessedAt(timestamp);
+      }
+    } catch {}
+  }, [appId]);
 
   const runAssessment = async () => {
     setLoading(true);
     setError('');
     try {
       const data = await api.post(`/api/applications/${appId}/fit-assessment`);
+      const timestamp = new Date().toISOString();
       setAssessment(data);
+      setAssessedAt(timestamp);
+      localStorage.setItem(cacheKey(appId), JSON.stringify({ data, timestamp }));
     } catch (err) {
       setError(err.error ?? 'Assessment failed');
     } finally {
@@ -182,13 +199,21 @@ export default function FitAssessmentTab({ appId, job, existingScore }) {
             </div>
           )}
 
-          <button
-            onClick={runAssessment}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Re-run assessment
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={runAssessment}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Refreshing…' : 'Re-run assessment'}
+            </button>
+            {assessedAt && !loading && (
+              <span className="text-xs text-slate-600">
+                Last run {new Date(assessedAt).toLocaleString()}
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>
