@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  MATCH_SCORE_PROMPT,
   JOB_PARSE_PROMPT,
   CV_OPTIMIZATION_PROMPT,
   COVER_LETTER_PROMPT,
@@ -58,4 +59,11 @@ export const analyzeTranscript = (transcriptText, jobDescription) =>
     TRANSCRIPT_ANALYSIS_PROMPT,
     `Interview Transcript:\n\n${transcriptText}\n\n---\n\nTarget Job:\n\n${jobDescription}`,
     3000
+  );
+
+export const scoreMatch = (jobDescription, userCV) =>
+  callClaude(
+    MATCH_SCORE_PROMPT,
+    `CV:\n\n${userCV.slice(0, 4000)}\n\n---\n\nJob Description:\n\n${jobDescription.slice(0, 4000)}`,
+    500
   );

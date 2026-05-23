@@ -6,9 +6,9 @@ import {
   scrapeLinkedIn,
   scrapeGeneric,
   extractKeywords,
-  calculateMatchScore,
   checkDuplicate,
 } from '../services/scraper.js';
+import { scoreMatch } from '../services/claude.js';
 
 export const parseJob = async (req, res) => {
   const { input, userCV } = req.body;
@@ -34,7 +34,19 @@ export const parseJob = async (req, res) => {
   }
 
   jobData.keywords = extractKeywords(jobData.description);
-  jobData.match_score = userCV ? calculateMatchScore(jobData.description, userCV) : 0;
+  if (userCV) {
+    try {
+      const result = await scoreMatch(jobData.description, userCV);
+      jobData.match_score = result.score ?? 0;
+      jobData.match_summary = result.summary ?? null;
+    } catch {
+      jobData.match_score = 0;
+      jobData.match_summary = null;
+    }
+  } else {
+    jobData.match_score = 0;
+    jobData.match_summary = null;
+  }
 
   const { data: existing } = await supabase
     .from('jobs')

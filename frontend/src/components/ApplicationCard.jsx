@@ -48,9 +48,9 @@ export default function ApplicationCard({ application }) {
             <Calendar className="w-3.5 h-3.5" /> Applied {application.applied_date}
           </span>
         )}
-        {application.match_score > 0 && (
+        {(job.match_score ?? 0) > 0 && (
           <span className="flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> {application.match_score}% match
+            <TrendingUp className="w-3.5 h-3.5" /> {job.match_score}% match
           </span>
         )}
       </div>
