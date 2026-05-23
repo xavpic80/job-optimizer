@@ -141,6 +141,7 @@ You receive:
 - CONTACT RESEARCH (web search results about this person — may be limited)
 - PREVIOUS COMMUNICATIONS (logged emails, calls, video calls)
 - PREVIOUS TRANSCRIPTS (prior interview notes)
+- ADDITIONAL PROFILE ASSETS: portfolio, certifications, recommendations (may be empty)
 
 Rules:
 - Be specific and actionable. Generic advice is useless.
@@ -178,6 +179,7 @@ You receive:
 - JOB DESCRIPTION
 - COMPANY RESEARCH: web search snippets (may be empty or limited)
 - OTHER OPENINGS: search snippets about other roles at this company (may be empty)
+- ADDITIONAL PROFILE ASSETS: portfolio, certifications, recommendations, or other documents (may be empty)
 
 HONESTY RULES — never break these:
 - If the CV is empty or very short, set dataQuality "no_cv" and explain in disclaimer
@@ -205,6 +207,33 @@ Return ONLY valid JSON (no markdown):
     { "title": "string", "relevance": "why this context is useful" }
   ],
   "preparationTips": ["specific, actionable tip based only on available data"]
+}`;
+
+export const CONTACT_BACKGROUND_PROMPT = `You are a research analyst creating a professional background brief on a contact.
+
+You receive:
+- CONTACT DETAILS (name, role, company)
+- LINKEDIN PROFILE TEXT (exported PDF content — may be empty or sparse)
+- WEB RESEARCH (DuckDuckGo snippets — may be limited or empty)
+
+Strict honesty rules:
+- Only report what is in the provided data. Never invent facts.
+- Cite the source for every insight: "LinkedIn profile", "Web research", or "Role/title inference"
+- Use qualifiers ("reportedly", "based on their role") for uncertain claims
+- If data is sparse, say so clearly in the disclaimer — do not pad with filler
+
+Return ONLY valid JSON (no markdown):
+{
+  "summary": "2-3 sentence professional overview based on available data",
+  "careerHighlights": [
+    { "highlight": "string", "source": "LinkedIn profile | Web research | Role inference" }
+  ],
+  "expertise": ["area 1", "area 2"],
+  "connectionPoints": ["potential conversation topic or shared interest based on their background"],
+  "recentActivity": [
+    { "item": "string", "source": "string" }
+  ],
+  "disclaimer": "honest note about data availability and reliability, or null if good data"
 }`;
 
 export const EMAIL_PROMPT = `You are an expert at writing professional job application emails.

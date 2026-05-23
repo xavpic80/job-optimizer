@@ -4,6 +4,7 @@ import api from '../api/client.js';
 
 export default function JobParseForm({ onJobParsed, userCV }) {
   const [input, setInput] = useState('');
+  const [postingDate, setPostingDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -13,9 +14,10 @@ export default function JobParseForm({ onJobParsed, userCV }) {
     setLoading(true);
     setError('');
     try {
-      const data = await api.post('/api/jobs/parse', { input, userCV });
+      const data = await api.post('/api/jobs/parse', { input, userCV, postingDate: postingDate || null });
       onJobParsed(data.job);
       setInput('');
+      setPostingDate('');
     } catch (err) {
       setError(err.error ?? 'Failed to parse job');
     } finally {
@@ -39,6 +41,17 @@ export default function JobParseForm({ onJobParsed, userCV }) {
         <p className="text-xs text-slate-500 mt-1">
           LinkedIn blocks automated scraping — paste the job description as text instead.
         </p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Posting Date <span className="text-slate-500 font-normal">(optional)</span>
+        </label>
+        <input
+          type="date"
+          value={postingDate}
+          onChange={(e) => setPostingDate(e.target.value)}
+          className="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-slate-200 text-sm focus:outline-none focus:border-cyan-500"
+        />
       </div>
       {error && (
         <div className="flex gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">

@@ -100,7 +100,7 @@ export const updateApplication = async (req, res) => {
 export const fitAssessment = async (req, res) => {
   const userId = req.user.id;
 
-  const [{ data: app, error }, { data: cvData }] = await Promise.all([
+  const [{ data: app, error }, { data: cvData }, { data: assetsData }] = await Promise.all([
     supabase
       .from('applications')
       .select('*, jobs(*)')
@@ -113,19 +113,26 @@ export const fitAssessment = async (req, res) => {
       .eq('user_id', userId)
       .eq('is_current', true)
       .single(),
+    supabase
+      .from('profile_assets')
+      .select('name, asset_type, extracted_text')
+      .eq('user_id', userId),
   ]);
 
   if (error || !app) return res.status(404).json({ error: 'Application not found' });
 
   const job = app.jobs;
   const userCV = cvData?.cv_text ?? '';
+  const profileAssets = assetsData?.length > 0
+    ? assetsData.map((a) => `[${a.asset_type.toUpperCase()}] ${a.name}:\n${a.extracted_text}`).join('\n\n---\n\n')
+    : null;
 
   const research = await researchCompany(job.company);
   const newsText = research.news.length > 0 ? research.news.join('\n\n') : null;
   const openingsText = research.openings.length > 0 ? research.openings.join('\n\n') : null;
 
   try {
-    const result = await assessFit(job.description, userCV, newsText, openingsText);
+    const result = await assessFit(job.description, userCV, newsText, openingsText, profileAssets);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -136,7 +143,7 @@ export const meetingPrep = async (req, res) => {
   const { contactId } = req.body;
   const userId = req.user.id;
 
-  const [{ data: app }, { data: cvData }] = await Promise.all([
+  const [{ data: app }, { data: cvData }, { data: mpAssetsData }] = await Promise.all([
     supabase
       .from('applications')
       .select('*, jobs(*), communications(*), transcripts(*)')
@@ -149,12 +156,19 @@ export const meetingPrep = async (req, res) => {
       .eq('user_id', userId)
       .eq('is_current', true)
       .single(),
+    supabase
+      .from('profile_assets')
+      .select('name, asset_type, extracted_text')
+      .eq('user_id', userId),
   ]);
 
   if (!app) return res.status(404).json({ error: 'Application not found' });
 
   const job = app.jobs;
   const userCV = cvData?.cv_text ?? '';
+  const mpProfileAssets = mpAssetsData?.length > 0
+    ? mpAssetsData.map((a) => `[${a.asset_type.toUpperCase()}] ${a.name}:\n${a.extracted_text}`).join('\n\n---\n\n')
+    : null;
 
   // Fetch selected contact (optional)
   let contact = null;
@@ -202,7 +216,8 @@ export const meetingPrep = async (req, res) => {
       contactInfo,
       contactResearch.join('\n\n') || null,
       commsText,
-      transcriptsText
+      transcriptsText,
+      mpProfileAssets
     );
     res.json(result);
   } catch (err) {

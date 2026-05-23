@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, FileText, LogOut, Plus, X } from 'lucide-react';
+import { Zap, FileText, LogOut, Plus, X, Briefcase, Send, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../api/client.js';
 import JobParseForm from '../components/JobParseForm.jsx';
@@ -16,6 +16,25 @@ const STATUS_LABELS = {
   interview_scheduled: 'Interview', interview_completed: 'Interviewed',
   final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
 };
+
+const PIPELINE_STATUSES = ['screening', 'interview_scheduled', 'interview_completed', 'final_round'];
+
+function StatCard({ label, value, icon: Icon, color, onClick, active }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 min-w-[120px] flex flex-col items-center gap-1.5 p-4 rounded-xl border transition-all ${
+        active
+          ? 'bg-slate-700 border-slate-500 text-white'
+          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-600 hover:text-white'
+      }`}
+    >
+      <Icon className={`w-5 h-5 ${color}`} />
+      <span className={`text-2xl font-bold ${active ? 'text-white' : 'text-slate-200'}`}>{value}</span>
+      <span className="text-xs font-medium">{label}</span>
+    </button>
+  );
+}
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -34,6 +53,15 @@ export default function Dashboard() {
       setCurrentCV(cv);
     }).finally(() => setLoading(false));
   }, []);
+
+  const stats = useMemo(() => {
+    const total = applications.length;
+    const inPipeline = applications.filter((a) => PIPELINE_STATUSES.includes(a.status)).length;
+    const offers = applications.filter((a) => a.status === 'offer').length;
+    const rejected = applications.filter((a) => a.status === 'rejected').length;
+    const applied = applications.filter((a) => a.status === 'applied').length;
+    return { total, applied, inPipeline, offers, rejected };
+  }, [applications]);
 
   const handleJobParsed = async (job) => {
     const app = await api.post('/api/applications', { jobId: job.id });
@@ -56,7 +84,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <Link to="/cv" className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">
-              <FileText className="w-4 h-4" /> CV
+              <FileText className="w-4 h-4" /> CV & Profile
             </Link>
             <span className="text-slate-600">|</span>
             <span className="text-sm text-slate-400">{user?.full_name ?? user?.email}</span>
@@ -68,6 +96,52 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* ── Stats Dashboard ─────────────────────────────────────────────── */}
+        {!loading && applications.length > 0 && (
+          <div className="flex gap-3 flex-wrap mb-8">
+            <StatCard
+              label="Total"
+              value={stats.total}
+              icon={Briefcase}
+              color="text-slate-400"
+              onClick={() => setFilter('all')}
+              active={filter === 'all'}
+            />
+            <StatCard
+              label="Applied"
+              value={stats.applied}
+              icon={Send}
+              color="text-blue-400"
+              onClick={() => setFilter('applied')}
+              active={filter === 'applied'}
+            />
+            <StatCard
+              label="In Pipeline"
+              value={stats.inPipeline}
+              icon={TrendingUp}
+              color="text-purple-400"
+              onClick={() => setFilter('screening')}
+              active={['screening', 'interview_scheduled', 'interview_completed', 'final_round'].includes(filter)}
+            />
+            <StatCard
+              label="Offers"
+              value={stats.offers}
+              icon={CheckCircle}
+              color="text-green-400"
+              onClick={() => setFilter('offer')}
+              active={filter === 'offer'}
+            />
+            <StatCard
+              label="Rejected"
+              value={stats.rejected}
+              icon={XCircle}
+              color="text-red-400"
+              onClick={() => setFilter('rejected')}
+              active={filter === 'rejected'}
+            />
+          </div>
+        )}
+
         {/* Add Job Panel */}
         {showAddJob ? (
           <div className="mb-8 bg-slate-900 border border-slate-700 rounded-xl p-6">

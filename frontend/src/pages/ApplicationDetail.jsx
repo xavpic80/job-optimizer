@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Zap, Download,
-  ChevronDown, Trash2,
+  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar,
 } from 'lucide-react';
 import api from '../api/client.js';
 import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
 import CommunicationsTab from '../components/CommunicationsTab.jsx';
 import MeetingPrepTab from '../components/MeetingPrepTab.jsx';
+import ContactsTab from '../components/ContactsTab.jsx';
 
 const STATUS_OPTIONS = [
   'saved', 'applied', 'screening', 'interview_scheduled',
@@ -20,7 +20,7 @@ const STATUS_LABELS = {
   final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
 };
 
-const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Communications', 'Meeting Prep', 'Transcripts'];
+const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Contacts', 'Communications', 'Meeting Prep'];
 
 export default function ApplicationDetail() {
   const { id } = useParams();
@@ -32,14 +32,24 @@ export default function ApplicationDetail() {
   const [optimizations, setOptimizations] = useState(null);
   const [optimizedAt, setOptimizedAt] = useState(null);
   const [statusChanging, setStatusChanging] = useState(false);
+  // contacts shared between Contacts tab and Communications tab
+  const [contacts, setContacts] = useState([]);
+  // posting date editing
+  const [editingDate, setEditingDate] = useState(false);
+  const [postingDate, setPostingDate] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
 
   useEffect(() => {
     api.get(`/api/applications/${id}`)
-      .then(setApp)
+      .then((data) => {
+        setApp(data);
+        setPostingDate(data.jobs?.posting_date ?? '');
+      })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Load cached optimize results
   useEffect(() => {
     if (!id) return;
     try {
@@ -52,6 +62,14 @@ export default function ApplicationDetail() {
     } catch {}
   }, [id]);
 
+  // Load contacts once (shared between tabs)
+  useEffect(() => {
+    if (!id) return;
+    api.get(`/api/applications/${id}/contacts`)
+      .then(setContacts)
+      .catch(() => {});
+  }, [id]);
+
   const updateStatus = async (status) => {
     setStatusChanging(true);
     try {
@@ -59,6 +77,19 @@ export default function ApplicationDetail() {
       setApp((prev) => ({ ...prev, ...updated.application }));
     } finally {
       setStatusChanging(false);
+    }
+  };
+
+  const savePostingDate = async () => {
+    setSavingDate(true);
+    try {
+      await api.patch(`/api/jobs/${app.jobs.id}`, { postingDate: postingDate || null });
+      setApp((prev) => ({ ...prev, jobs: { ...prev.jobs, posting_date: postingDate || null } }));
+      setEditingDate(false);
+    } catch {
+      // silently ignore
+    } finally {
+      setSavingDate(false);
     }
   };
 
@@ -108,7 +139,7 @@ export default function ApplicationDetail() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Status + score */}
+        {/* Status + score + export */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
             <label className="text-sm text-slate-400">Status:</label>
@@ -150,9 +181,47 @@ export default function ApplicationDetail() {
           ))}
         </div>
 
-        {/* Tab Content */}
+        {/* ── Overview ─────────────────────────────────────────────────────── */}
         {tab === 'Overview' && (
           <div className="space-y-4">
+            {/* Posting date */}
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex flex-wrap items-center gap-3">
+              <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <span className="text-sm text-slate-400">Posting Date:</span>
+              {editingDate ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={postingDate}
+                    onChange={(e) => setPostingDate(e.target.value)}
+                    className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                  <button
+                    onClick={savePostingDate}
+                    disabled={savingDate}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 disabled:opacity-50 font-medium"
+                  >
+                    {savingDate ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => { setEditingDate(false); setPostingDate(job.posting_date ?? ''); }}
+                    className="text-xs text-slate-500 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditingDate(true)}
+                  className="text-sm hover:text-cyan-400 transition-colors"
+                >
+                  {job.posting_date
+                    ? <span className="text-white">{new Date(job.posting_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    : <span className="text-slate-500 italic">Not set — click to add</span>}
+                </button>
+              )}
+            </div>
+
             <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
               <h2 className="font-semibold text-white mb-3">Job Description</h2>
               <p className="text-sm text-slate-300 whitespace-pre-wrap">{job.description}</p>
@@ -176,10 +245,12 @@ export default function ApplicationDetail() {
           </div>
         )}
 
+        {/* ── Fit Assessment ───────────────────────────────────────────────── */}
         {tab === 'Fit Assessment' && (
           <FitAssessmentTab appId={id} job={job} existingScore={job.match_score} />
         )}
 
+        {/* ── Optimize ─────────────────────────────────────────────────────── */}
         {tab === 'Optimize' && (
           <div className="space-y-4">
             {!optimizations && (
@@ -191,7 +262,7 @@ export default function ApplicationDetail() {
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   <Zap className="w-5 h-5" />
-                  {optimizing ? 'Optimizing...' : 'Run Optimization'}
+                  {optimizing ? 'Optimizing…' : 'Run Optimization'}
                 </button>
               </div>
             )}
@@ -245,47 +316,24 @@ export default function ApplicationDetail() {
           </div>
         )}
 
+        {/* ── Contacts ─────────────────────────────────────────────────────── */}
+        {tab === 'Contacts' && (
+          <ContactsTab appId={id} />
+        )}
+
+        {/* ── Communications ───────────────────────────────────────────────── */}
         {tab === 'Communications' && (
           <CommunicationsTab
             appId={id}
+            contacts={contacts}
             initialCommunications={app.communications ?? []}
+            initialTranscripts={app.transcripts ?? []}
           />
         )}
 
+        {/* ── Meeting Prep ─────────────────────────────────────────────────── */}
         {tab === 'Meeting Prep' && (
           <MeetingPrepTab appId={id} />
-        )}
-
-        {tab === 'Transcripts' && (
-          <div>
-            <p className="text-slate-400 text-sm mb-4">
-              {app.transcripts?.length ?? 0} interview transcripts.
-            </p>
-            <div className="space-y-4">
-              {(app.transcripts ?? []).map((t) => (
-                <div key={t.id} className="bg-slate-900 border border-slate-700 rounded-xl p-5">
-                  <p className="font-semibold text-white mb-1">
-                    {t.interview_type ? `${t.interview_type} interview` : 'Interview'} — {new Date(t.interview_date).toLocaleDateString()}
-                  </p>
-                  {t.interviewer_name && <p className="text-sm text-slate-400 mb-3">with {t.interviewer_name}</p>}
-                  {t.coaching_insights?.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Coaching Insights</p>
-                      {t.coaching_insights.map((ins) => (
-                        <div key={ins.id} className="text-sm p-3 bg-slate-800 rounded-lg">
-                          <span className={`text-xs font-medium ${ins.insight_type === 'strength' ? 'text-green-400' : ins.insight_type === 'opportunity' ? 'text-yellow-400' : 'text-blue-400'}`}>
-                            [{ins.insight_type}]
-                          </span>
-                          <span className="text-slate-300 ml-2">{ins.feedback}</span>
-                          {ins.suggestion && <p className="text-slate-400 mt-1">→ {ins.suggestion}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         )}
       </div>
     </div>

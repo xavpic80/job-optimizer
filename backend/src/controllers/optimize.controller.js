@@ -24,6 +24,15 @@ export const optimizeApplication = async (req, res) => {
 
   if (!cv) return res.status(400).json({ error: 'No CV saved. Please upload your CV first.' });
 
+  // Fetch profile assets to enrich AI context
+  const { data: assetsData } = await supabase
+    .from('profile_assets')
+    .select('name, asset_type, extracted_text')
+    .eq('user_id', userId);
+  const profileAssets = assetsData?.length > 0
+    ? assetsData.map((a) => `[${a.asset_type.toUpperCase()}] ${a.name}:\n${a.extracted_text}`).join('\n\n---\n\n')
+    : null;
+
   const job = app.jobs;
   const optimizations = {};
   const errors = {};
@@ -44,10 +53,10 @@ export const optimizeApplication = async (req, res) => {
   };
 
   await Promise.all([
-    run('cv', () => claude.optimizeCV(job.description, cv.cv_text)),
-    run('cover_letter', () => claude.generateCoverLetter(job, cv.cv_text)),
-    run('email', () => claude.generateEmail(job, cv.cv_text)),
-    run('interview_prep', () => claude.generateInterviewPrep(job, cv.cv_text)),
+    run('cv', () => claude.optimizeCV(job.description, cv.cv_text, profileAssets)),
+    run('cover_letter', () => claude.generateCoverLetter(job, cv.cv_text, profileAssets)),
+    run('email', () => claude.generateEmail(job, cv.cv_text, profileAssets)),
+    run('interview_prep', () => claude.generateInterviewPrep(job, cv.cv_text, profileAssets)),
   ]);
 
   res.json({ success: true, jobId: job.id, applicationId: appId, matchScore: job.match_score, optimizations, errors });

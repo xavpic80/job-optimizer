@@ -43,6 +43,11 @@ export default function ApplicationCard({ application }) {
             <MapPin className="w-3.5 h-3.5" /> {job.location}
           </span>
         )}
+        {job.posting_date && (
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5" /> Posted {new Date(job.posting_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+        )}
         {application.applied_date && (
           <span className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5" /> Applied {application.applied_date}

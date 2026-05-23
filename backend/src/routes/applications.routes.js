@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   createApplication, listApplications, getApplication,
   updateApplication, deleteApplication, fitAssessment, meetingPrep,
@@ -11,8 +12,11 @@ import { optimizeApplication, getOptimization } from '../controllers/optimize.co
 import { exportApplication } from '../controllers/export.controller.js';
 import {
   listContacts, createContact, updateContact, deleteContact,
+  uploadLinkedinPdf, generateBackground,
 } from '../controllers/contacts.controller.js';
 import { authenticate } from '../middleware/auth.js';
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const router = Router();
 router.use(authenticate);
@@ -30,6 +34,8 @@ router.get('/:id/contacts', listContacts);
 router.post('/:id/contacts', createContact);
 router.patch('/:id/contacts/:contactId', updateContact);
 router.delete('/:id/contacts/:contactId', deleteContact);
+router.post('/:id/contacts/:contactId/linkedin-pdf', upload.single('pdf'), uploadLinkedinPdf);
+router.post('/:id/contacts/:contactId/background', generateBackground);
 
 router.post('/:id/communications', createCommunication);
 router.get('/:id/communications', listCommunications);

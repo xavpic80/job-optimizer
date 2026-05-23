@@ -72,6 +72,7 @@ export const parseJob = async (req, res) => {
       match_score: jobData.match_score,
       remote_type: jobData.remote_type ?? null,
       posted_date: jobData.posted_date ?? null,
+      posting_date: req.body.postingDate ?? null,
       parsed_at: new Date().toISOString(),
     })
     .select()
@@ -107,6 +108,31 @@ export const getJob = async (req, res) => {
 
   if (error || !data) return res.status(404).json({ error: 'Job not found' });
   res.json(data);
+};
+
+export const updateJob = async (req, res) => {
+  const { postingDate } = req.body;
+  const { data: existing } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
+
+  if (!existing) return res.status(404).json({ error: 'Job not found' });
+
+  const updates = {};
+  if (postingDate !== undefined) updates.posting_date = postingDate || null;
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, job: data });
 };
 
 export const deleteJob = async (req, res) => {

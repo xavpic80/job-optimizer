@@ -9,6 +9,7 @@ import communicationsRoutes from './routes/communications.routes.js';
 import transcriptsRoutes from './routes/transcripts.routes.js';
 import cvRoutes from './routes/cv.routes.js';
 import exportRoutes from './routes/export.routes.js';
+import assetsRoutes from './routes/assets.routes.js';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/communications', communicationsRoutes);
 app.use('/api/transcripts', transcriptsRoutes);
 app.use('/api/cv', cvRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/assets', assetsRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
