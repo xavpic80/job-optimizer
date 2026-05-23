@@ -1,51 +1,219 @@
-import React, { useState } from 'react';
-import { Mail, Phone, Video, MessageSquare, Plus, X, Trash2, FileText, Loader } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import {
+  Mail, Phone, Video, MessageSquare, Plus, X, Trash2, FileText,
+  Loader, Pencil, Check,
+} from 'lucide-react';
 import api from '../api/client.js';
 
 const COMM_TYPES = [
-  { value: 'email', label: 'Email', icon: Mail },
-  { value: 'phone_call', label: 'Phone Call', icon: Phone },
-  { value: 'video_call', label: 'Video Call', icon: Video },
-  { value: 'text', label: 'Text', icon: MessageSquare },
+  { value: 'email',      label: 'Email',      icon: Mail },
+  { value: 'phone_call', label: 'Phone Call',  icon: Phone },
+  { value: 'video_call', label: 'Video Call',  icon: Video },
+  { value: 'text',       label: 'Text',        icon: MessageSquare },
 ];
 
 const INTERVIEW_TYPES = [
   'phone_screen', 'technical', 'behavioral', 'case_study', 'final_round', 'other',
 ];
-
 const INTERVIEW_TYPE_LABELS = {
   phone_screen: 'Phone Screen', technical: 'Technical', behavioral: 'Behavioral',
   case_study: 'Case Study', final_round: 'Final Round', other: 'Interview',
 };
 
-// ── Communication card ────────────────────────────────────────────────────────
-function CommCard({ comm, contacts }) {
-  const TypeIcon = COMM_TYPES.find((t) => t.value === comm.type)?.icon ?? Mail;
-  const contact = contacts.find((c) => c.id === comm.contact_id);
+const ME = 'me';
+
+// Format a contact ID or 'me' into a display name
+function resolveParty(id, contacts) {
+  if (!id || id === ME) return { name: 'Me', initials: 'Me', isMe: true };
+  const c = contacts.find((x) => x.id === id);
+  if (!c) return { name: 'Unknown', initials: '?', isMe: false };
+  const initials = `${c.first_name?.[0] ?? ''}${c.last_name?.[0] ?? ''}`.toUpperCase();
+  const name = `${c.first_name} ${c.last_name}${c.role ? ` · ${c.role}` : ''}`;
+  return { name, initials, isMe: false };
+}
+
+// Who sent this message — from_id if present, else fall back to direction
+function getSender(comm) {
+  if (comm.from_id) return comm.from_id;
+  if (comm.direction === 'sent') return ME;
+  return null; // unknown
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ── Contact party selector ────────────────────────────────────────────────────
+function PartySelect({ label, value, onChange, contacts }) {
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <TypeIcon className="w-4 h-4 text-slate-400" />
+    <div>
+      <label className="text-xs text-slate-400 mb-1 block">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+      >
+        <option value={ME}>Me</option>
+        {contacts.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.first_name} {c.last_name}{c.role ? ` · ${c.role}` : ''}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ── Inline edit form (shown inside a bubble) ──────────────────────────────────
+function EditForm({ comm, contacts, onSave, onCancel }) {
+  const [type, setType] = useState(comm.type ?? 'email');
+  const [date, setDate] = useState(comm.date_sent?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+  const [fromId, setFromId] = useState(getSender(comm) ?? ME);
+  const [toId, setToId] = useState(comm.to_id ?? ME);
+  const [notes, setNotes] = useState(comm.notes || comm.body || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const { communication } = await api.patch(`/api/communications/${comm.id}`, {
+        type, dateSent: date, notes, fromId, toId,
+      });
+      onSave(communication);
+    } catch (err) {
+      setError(err.error ?? 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 p-3 bg-slate-800 border border-slate-600 rounded-xl text-sm">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-1 block">Type</label>
+          <select value={type} onChange={(e) => setType(e.target.value)}
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-cyan-500">
+            {COMM_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-white capitalize">{comm.type.replace('_', ' ')}</span>
-            {contact && (
-              <span className="text-xs text-slate-400">
-                with {contact.first_name} {contact.last_name}
-                {contact.role && ` · ${contact.role}`}
-              </span>
-            )}
-            <span className="text-xs text-slate-500 ml-auto">
-              {new Date(comm.date_sent).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </div>
-          {(comm.notes || comm.body) && (
-            <p className="text-sm text-slate-300 mt-1.5 whitespace-pre-wrap">{comm.notes || comm.body}</p>
-          )}
+        <div>
+          <label className="text-xs text-slate-400 mb-1 block">Date</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-cyan-500" />
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        <PartySelect label="From" value={fromId} onChange={setFromId} contacts={contacts} />
+        <PartySelect label="To"   value={toId}   onChange={setToId}   contacts={contacts} />
+      </div>
+      <div>
+        <label className="text-xs text-slate-400 mb-1 block">Notes</label>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-cyan-500 resize-none" />
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      <div className="flex items-center gap-2">
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-1 px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-medium hover:bg-cyan-500 disabled:opacity-50 transition-colors">
+          {saving ? <Loader className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={onCancel} className="text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Single message bubble ─────────────────────────────────────────────────────
+function MessageBubble({ comm, contacts, onUpdate, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const senderId = getSender(comm);
+  const isMe = !senderId || senderId === ME;
+  const sender = resolveParty(senderId, contacts);
+  const recipient = resolveParty(comm.to_id, contacts);
+  const TypeIcon = COMM_TYPES.find((t) => t.value === comm.type)?.icon ?? Mail;
+  const text = comm.notes || comm.body || '';
+
+  if (editing) {
+    return (
+      <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-3`}>
+        <div className="w-full max-w-[85%]">
+          <EditForm
+            comm={comm}
+            contacts={contacts}
+            onSave={(updated) => { onUpdate(updated); setEditing(false); }}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex mb-3 gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+      {/* Avatar — left side only */}
+      {!isMe && (
+        <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 mt-1">
+          {sender.initials}
+        </div>
+      )}
+
+      <div className={`max-w-[78%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+        {/* Sender label — left side only */}
+        {!isMe && (
+          <p className="text-xs text-slate-500 mb-1 ml-1">{sender.name}</p>
+        )}
+
+        {/* Bubble */}
+        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+          isMe
+            ? 'bg-cyan-600 text-white rounded-br-sm'
+            : 'bg-slate-800 text-slate-100 rounded-bl-sm'
+        }`}>
+          {text || <span className="italic opacity-60">(no notes)</span>}
+        </div>
+
+        {/* Meta row */}
+        <div className={`flex items-center gap-1.5 mt-1 mx-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+          <TypeIcon className="w-3 h-3 text-slate-500" />
+          <span className="text-xs text-slate-500">
+            {comm.to_id && comm.to_id !== ME && !isMe
+              ? null
+              : comm.to_id && comm.to_id !== ME
+                ? `→ ${resolveParty(comm.to_id, contacts).name}`
+                : null}
+          </span>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-slate-600 hover:text-slate-300 transition-colors"
+            title="Edit"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => onDelete(comm.id)}
+            className="text-slate-600 hover:text-red-400 transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Avatar — right side (me) */}
+      {isMe && (
+        <div className="w-7 h-7 rounded-full bg-cyan-700 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 mt-1">
+          Me
+        </div>
+      )}
     </div>
   );
 }
@@ -78,17 +246,13 @@ function TranscriptCard({ transcript, onDelete }) {
               </button>
             )}
             {onDelete && (
-              <button
-                onClick={() => onDelete(t.id)}
-                className="text-slate-600 hover:text-red-400 transition-colors"
-              >
+              <button onClick={() => onDelete(t.id)} className="text-slate-600 hover:text-red-400 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Coaching insights */}
         {t.coaching_insights?.length > 0 && (
           <div className="mt-3 space-y-2">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Coaching Insights</p>
@@ -108,7 +272,6 @@ function TranscriptCard({ transcript, onDelete }) {
           </div>
         )}
 
-        {/* Full transcript text */}
         {expanded && t.transcript_text && (
           <div className="mt-3 p-3 bg-slate-800 rounded-lg">
             <p className="text-xs text-slate-400 mb-2 font-medium">Transcript</p>
@@ -122,28 +285,51 @@ function TranscriptCard({ transcript, onDelete }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function CommunicationsTab({ appId, contacts = [], initialCommunications = [], initialTranscripts = [] }) {
-  const [communications, setCommunications] = useState(initialCommunications);
+  const [communications, setCommunications] = useState(
+    // Sort oldest → newest for chat display
+    [...initialCommunications].sort((a, b) => new Date(a.date_sent) - new Date(b.date_sent))
+  );
   const [transcripts, setTranscripts] = useState(initialTranscripts);
 
   // ── Comm log form state ──────────────────────────────────────────────────
   const [showCommForm, setShowCommForm] = useState(false);
   const [commForm, setCommForm] = useState({
-    contactId: '', date: new Date().toISOString().slice(0, 10), type: 'email', notes: '',
+    fromId: ME,
+    toId: contacts[0]?.id ?? ME,
+    date: new Date().toISOString().slice(0, 10),
+    type: 'email',
+    notes: '',
   });
   const [savingComm, setSavingComm] = useState(false);
   const [commError, setCommError] = useState('');
+
+  // Reset toId when contacts first load
+  const defaultToId = contacts.length > 0 ? contacts[0].id : ME;
 
   // ── Transcript form state ────────────────────────────────────────────────
   const [showTxForm, setShowTxForm] = useState(false);
   const [txForm, setTxForm] = useState({
     date: new Date().toISOString().slice(0, 10),
-    type: 'behavioral',
-    interviewer: '',
-    text: '',
+    type: 'behavioral', interviewer: '', text: '',
   });
   const [savingTx, setSavingTx] = useState(false);
   const [txError, setTxError] = useState('');
   const [txAnalyzing, setTxAnalyzing] = useState(false);
+
+  // Group messages by date for separators
+  const grouped = useMemo(() => {
+    const groups = [];
+    let lastDate = null;
+    for (const comm of communications) {
+      const dateLabel = formatDate(comm.date_sent);
+      if (dateLabel !== lastDate) {
+        groups.push({ type: 'date', label: dateLabel });
+        lastDate = dateLabel;
+      }
+      groups.push({ type: 'message', comm });
+    }
+    return groups;
+  }, [communications]);
 
   const logComm = async (e) => {
     e.preventDefault();
@@ -152,12 +338,13 @@ export default function CommunicationsTab({ appId, contacts = [], initialCommuni
     try {
       const { communication } = await api.post(`/api/applications/${appId}/communications`, {
         type: commForm.type,
-        contactId: commForm.contactId || null,
         dateSent: commForm.date,
         notes: commForm.notes,
+        fromId: commForm.fromId,
+        toId: commForm.toId,
       });
-      setCommunications((prev) => [communication, ...prev]);
-      setCommForm({ contactId: '', date: new Date().toISOString().slice(0, 10), type: 'email', notes: '' });
+      setCommunications((prev) => [...prev, communication]);
+      setCommForm({ fromId: ME, toId: defaultToId, date: new Date().toISOString().slice(0, 10), type: 'email', notes: '' });
       setShowCommForm(false);
     } catch (err) {
       setCommError(err.error ?? 'Failed to log communication');
@@ -166,12 +353,20 @@ export default function CommunicationsTab({ appId, contacts = [], initialCommuni
     }
   };
 
+  const updateComm = (updated) => {
+    setCommunications((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  const deleteComm = async (id) => {
+    try {
+      await api.delete(`/api/communications/${id}`);
+      setCommunications((prev) => prev.filter((c) => c.id !== id));
+    } catch {}
+  };
+
   const addTranscript = async (e) => {
     e.preventDefault();
-    if (!txForm.text.trim()) {
-      setTxError('Transcript text is required');
-      return;
-    }
+    if (!txForm.text.trim()) { setTxError('Transcript text is required'); return; }
     setSavingTx(true);
     setTxAnalyzing(false);
     setTxError('');
@@ -203,9 +398,9 @@ export default function CommunicationsTab({ appId, contacts = [], initialCommuni
 
   return (
     <div className="space-y-8">
-      {/* ── Communication Log ──────────────────────────────────────────────── */}
+      {/* ── Communication Thread ────────────────────────────────────────────── */}
       <section>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-white flex items-center gap-2">
             <Mail className="w-4 h-4 text-slate-400" /> Communication Log
           </h2>
@@ -219,8 +414,9 @@ export default function CommunicationsTab({ appId, contacts = [], initialCommuni
           )}
         </div>
 
+        {/* Log form */}
         {showCommForm && (
-          <form onSubmit={logComm} className="mb-4 p-4 bg-slate-900 border border-slate-700 rounded-xl space-y-3">
+          <form onSubmit={logComm} className="mb-5 p-4 bg-slate-900 border border-slate-700 rounded-xl space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Type *</label>
@@ -245,21 +441,20 @@ export default function CommunicationsTab({ appId, contacts = [], initialCommuni
                 />
               </div>
             </div>
-            {contacts.length > 0 && (
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">Contact</label>
-                <select
-                  value={commForm.contactId}
-                  onChange={(e) => setCommForm((f) => ({ ...f, contactId: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                >
-                  <option value="">— None —</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>{c.first_name} {c.last_name}{c.role ? ` · ${c.role}` : ''}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              <PartySelect
+                label="From"
+                value={commForm.fromId}
+                onChange={(v) => setCommForm((f) => ({ ...f, fromId: v }))}
+                contacts={contacts}
+              />
+              <PartySelect
+                label="To"
+                value={commForm.toId}
+                onChange={(v) => setCommForm((f) => ({ ...f, toId: v }))}
+                contacts={contacts}
+              />
+            </div>
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Notes</label>
               <textarea
@@ -290,14 +485,30 @@ export default function CommunicationsTab({ appId, contacts = [], initialCommuni
           </form>
         )}
 
-        {communications.length === 0 && !showCommForm && (
+        {/* Thread */}
+        {communications.length === 0 && !showCommForm ? (
           <p className="text-sm text-slate-500">No communications logged yet.</p>
+        ) : (
+          <div className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 space-y-1">
+            {grouped.map((item, i) =>
+              item.type === 'date' ? (
+                <div key={`date-${i}`} className="flex items-center gap-3 py-3">
+                  <div className="flex-1 border-t border-slate-800" />
+                  <span className="text-xs text-slate-600 flex-shrink-0">{item.label}</span>
+                  <div className="flex-1 border-t border-slate-800" />
+                </div>
+              ) : (
+                <MessageBubble
+                  key={item.comm.id}
+                  comm={item.comm}
+                  contacts={contacts}
+                  onUpdate={updateComm}
+                  onDelete={deleteComm}
+                />
+              )
+            )}
+          </div>
         )}
-        <div className="space-y-3">
-          {communications.map((c) => (
-            <CommCard key={c.id} comm={c} contacts={contacts} />
-          ))}
-        </div>
       </section>
 
       {/* ── Interview Transcripts ─────────────────────────────────────────── */}
