@@ -30,6 +30,7 @@ export default function ApplicationDetail() {
   const [tab, setTab] = useState('Overview');
   const [optimizing, setOptimizing] = useState(false);
   const [optimizations, setOptimizations] = useState(null);
+  const [optimizedAt, setOptimizedAt] = useState(null);
   const [statusChanging, setStatusChanging] = useState(false);
 
   useEffect(() => {
@@ -37,6 +38,18 @@ export default function ApplicationDetail() {
       .then(setApp)
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    try {
+      const cached = localStorage.getItem(`optimize_${id}`);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        setOptimizations(data);
+        setOptimizedAt(timestamp);
+      }
+    } catch {}
   }, [id]);
 
   const updateStatus = async (status) => {
@@ -55,7 +68,10 @@ export default function ApplicationDetail() {
       const data = await api.post(`/api/applications/${id}/optimize`, {
         outputFormats: ['cv', 'cover_letter', 'email', 'interview_prep'],
       });
+      const timestamp = new Date().toISOString();
       setOptimizations(data.optimizations);
+      setOptimizedAt(timestamp);
+      localStorage.setItem(`optimize_${id}`, JSON.stringify({ data: data.optimizations, timestamp }));
     } catch (err) {
       alert(err.error ?? 'Optimization failed');
     } finally {
@@ -216,9 +232,14 @@ export default function ApplicationDetail() {
                     ))}
                   </Section>
                 )}
-                <button onClick={runOptimize} disabled={optimizing} className="text-sm text-cyan-400 hover:underline">
-                  Re-run optimization
-                </button>
+                <div className="flex items-center gap-4">
+                  <button onClick={runOptimize} disabled={optimizing} className="text-sm text-cyan-400 hover:underline disabled:opacity-50">
+                    {optimizing ? 'Re-running…' : 'Re-run optimization'}
+                  </button>
+                  {optimizedAt && !optimizing && (
+                    <span className="text-xs text-slate-600">Last run {new Date(optimizedAt).toLocaleString()}</span>
+                  )}
+                </div>
               </div>
             )}
           </div>
