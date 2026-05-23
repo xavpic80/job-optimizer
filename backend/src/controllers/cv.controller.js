@@ -10,14 +10,23 @@ export const parsePDF = async (req, res) => {
     const data = await pdfParse(req.file.buffer);
     const text = data.text.replace(/\n{3,}/g, '\n\n').trim();
     if (!text) return res.status(422).json({ error: 'Could not extract text from PDF' });
-    res.json({ text, pages: data.numpages });
+
+    // Upload PDF to Supabase Storage (graceful degradation if bucket doesn't exist)
+    let pdfPath = null;
+    const storagePath = `${req.user.id}/${Date.now()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from('cvs')
+      .upload(storagePath, req.file.buffer, { contentType: 'application/pdf', upsert: true });
+    if (!uploadError) pdfPath = storagePath;
+
+    res.json({ text, pages: data.numpages, pdfPath });
   } catch (err) {
     res.status(422).json({ error: 'Failed to parse PDF: ' + err.message });
   }
 };
 
 export const saveCV = async (req, res) => {
-  const { cvText } = req.body;
+  const { cvText, pdfPath } = req.body;
   const userId = req.user.id;
   if (!cvText) return res.status(400).json({ error: 'cvText required' });
 
@@ -36,8 +45,8 @@ export const saveCV = async (req, res) => {
 
   const { data, error } = await supabase
     .from('cv_versions')
-    .insert({ user_id: userId, cv_text: cvText, version_number: nextVersion, is_current: true })
-    .select('id, version_number, is_current, created_at')
+    .insert({ user_id: userId, cv_text: cvText, version_number: nextVersion, is_current: true, pdf_path: pdfPath ?? null })
+    .select('id, version_number, is_current, created_at, pdf_path')
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
@@ -53,7 +62,16 @@ export const getCurrentCV = async (req, res) => {
     .single();
 
   if (error || !data) return res.status(404).json({ error: 'No current CV found' });
-  res.json(data);
+
+  let pdfUrl = null;
+  if (data.pdf_path) {
+    const { data: signed } = await supabase.storage
+      .from('cvs')
+      .createSignedUrl(data.pdf_path, 86400); // 24h
+    pdfUrl = signed?.signedUrl ?? null;
+  }
+
+  res.json({ ...data, pdf_url: pdfUrl });
 };
 
 export const listCVVersions = async (req, res) => {
