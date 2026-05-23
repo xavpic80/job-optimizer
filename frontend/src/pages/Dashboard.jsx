@@ -52,7 +52,7 @@ export default function Dashboard() {
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="w-6 h-6 text-cyan-400" />
-            <span className="font-bold text-white">JobOptimizer</span>
+            <span className="font-bold text-white">JobOptimizer 3000</span>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/cv" className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">

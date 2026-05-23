@@ -30,7 +30,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <Zap className="w-8 h-8 text-cyan-400" />
-          <h1 className="text-2xl font-bold text-white">JobOptimizer</h1>
+          <h1 className="text-2xl font-bold text-white">JobOptimizer 3000</h1>
         </div>
         <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-700 rounded-xl p-8 space-y-5">
           <h2 className="text-xl font-semibold text-white">Sign in</h2>
