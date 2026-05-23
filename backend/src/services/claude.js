@@ -12,6 +12,9 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const MODEL = 'claude-sonnet-4-6';
 
+const stripMarkdown = (text) =>
+  text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
 const callClaude = async (systemPrompt, userContent, maxTokens = 2000) => {
   const response = await anthropic.messages.create({
     model: MODEL,
@@ -19,7 +22,7 @@ const callClaude = async (systemPrompt, userContent, maxTokens = 2000) => {
     system: systemPrompt,
     messages: [{ role: 'user', content: userContent }],
   });
-  return JSON.parse(response.content[0].text);
+  return JSON.parse(stripMarkdown(response.content[0].text));
 };
 
 export const parseJobContent = (rawText) =>
