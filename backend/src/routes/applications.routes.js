@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   createApplication, listApplications, getApplication,
-  updateApplication, deleteApplication,
+  updateApplication, deleteApplication, fitAssessment,
 } from '../controllers/applications.controller.js';
 import {
   createCommunication, listCommunications,
@@ -9,6 +9,9 @@ import {
 import { createTranscript, listTranscripts } from '../controllers/transcripts.controller.js';
 import { optimizeApplication, getOptimization } from '../controllers/optimize.controller.js';
 import { exportApplication } from '../controllers/export.controller.js';
+import {
+  listContacts, createContact, updateContact, deleteContact,
+} from '../controllers/contacts.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -19,6 +22,13 @@ router.get('/', listApplications);
 router.get('/:id', getApplication);
 router.patch('/:id', updateApplication);
 router.delete('/:id', deleteApplication);
+
+router.post('/:id/fit-assessment', fitAssessment);
+
+router.get('/:id/contacts', listContacts);
+router.post('/:id/contacts', createContact);
+router.patch('/:id/contacts/:contactId', updateContact);
+router.delete('/:id/contacts/:contactId', deleteContact);
 
 router.post('/:id/communications', createCommunication);
 router.get('/:id/communications', listCommunications);

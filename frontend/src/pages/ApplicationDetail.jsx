@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Zap, Mail, MessageSquare, Mic, Download,
-  ChevronDown, Trash2, CheckCircle,
+  ArrowLeft, Zap, Download,
+  ChevronDown, Trash2,
 } from 'lucide-react';
 import api from '../api/client.js';
+import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
+import CommunicationsTab from '../components/CommunicationsTab.jsx';
 
 const STATUS_OPTIONS = [
   'saved', 'applied', 'screening', 'interview_scheduled',
@@ -17,7 +19,7 @@ const STATUS_LABELS = {
   final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
 };
 
-const TABS = ['Overview', 'Optimize', 'Communications', 'Transcripts'];
+const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Communications', 'Transcripts'];
 
 export default function ApplicationDetail() {
   const { id } = useParams();
@@ -117,12 +119,12 @@ export default function ApplicationDetail() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-slate-900 p-1 rounded-lg">
+        <div className="flex gap-1 mb-6 bg-slate-900 p-1 rounded-lg overflow-x-auto">
           {TABS.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-shrink-0 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 tab === t ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -155,6 +157,10 @@ export default function ApplicationDetail() {
               </div>
             )}
           </div>
+        )}
+
+        {tab === 'Fit Assessment' && (
+          <FitAssessmentTab appId={id} job={job} existingScore={job.match_score} />
         )}
 
         {tab === 'Optimize' && (
@@ -218,23 +224,11 @@ export default function ApplicationDetail() {
         )}
 
         {tab === 'Communications' && (
-          <div>
-            <p className="text-slate-400 text-sm mb-4">
-              {app.communications?.length ?? 0} communications logged.
-            </p>
-            <div className="space-y-3">
-              {(app.communications ?? []).map((c) => (
-                <div key={c.id} className="bg-slate-900 border border-slate-700 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-slate-400 uppercase">{c.type} · {c.direction}</span>
-                    <span className="text-xs text-slate-500">{new Date(c.date_sent).toLocaleDateString()}</span>
-                  </div>
-                  {c.subject && <p className="text-sm font-semibold text-white mb-1">{c.subject}</p>}
-                  <p className="text-sm text-slate-300">{c.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <CommunicationsTab
+            appId={id}
+            initialContacts={app.contacts ?? []}
+            initialCommunications={app.communications ?? []}
+          />
         )}
 
         {tab === 'Transcripts' && (

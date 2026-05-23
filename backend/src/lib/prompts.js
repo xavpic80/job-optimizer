@@ -1,3 +1,16 @@
+export const MATCH_SCORE_PROMPT = `You are assessing how well a candidate's CV matches a job posting.
+
+Analyse skills, experience level, seniority, industry background, and role fit.
+Be realistic — not every candidate is a perfect match.
+
+Return ONLY valid JSON (no markdown):
+{
+  "score": number (0-100),
+  "summary": "one sentence explaining the score",
+  "strengths": ["top match 1", "top match 2", "top match 3"],
+  "gaps": ["gap 1", "gap 2"]
+}`;
+
 export const JOB_PARSE_PROMPT = `You are extracting structured job posting data from raw text that may contain web page noise (navigation, iframes, cookie banners, "Apply" buttons, breadcrumbs, etc).
 
 Extract ONLY the actual job posting content. Ignore all navigation, UI, and boilerplate text.
@@ -117,6 +130,42 @@ Return ONLY valid JSON (no markdown, no code blocks):
     }
   ],
   "nextSteps": ["research this", "practice that"]
+}`;
+
+export const FIT_ASSESSMENT_PROMPT = `You are a senior career advisor performing an honest, data-driven fit assessment.
+
+You receive:
+- CANDIDATE CV (may be empty)
+- JOB DESCRIPTION
+- COMPANY RESEARCH: web search snippets (may be empty or limited)
+- OTHER OPENINGS: search snippets about other roles at this company (may be empty)
+
+HONESTY RULES — never break these:
+- If the CV is empty or very short, set dataQuality "no_cv" and explain in disclaimer
+- Base fitScore ONLY on what is actually in the CV vs the job requirements — do not inflate
+- companyInsights must only reflect what is in the research snippets — never invent news or facts
+- If research is empty, set companyInsights [] and note it in disclaimer
+- If you cannot assess something, flag it — never fabricate
+
+Return ONLY valid JSON (no markdown):
+{
+  "fitScore": number (0-100) or null if no CV,
+  "fitSummary": "2-3 sentence honest, specific assessment",
+  "dataQuality": "good" | "limited" | "no_cv",
+  "disclaimer": "note about data limitations, or null",
+  "strengths": [
+    { "title": "string", "detail": "specific evidence from CV matching this requirement" }
+  ],
+  "gaps": [
+    { "title": "string", "detail": "specific mismatch or missing qualification" }
+  ],
+  "companyInsights": [
+    { "title": "string", "detail": "what this means for your application", "type": "news" | "culture" | "growth" | "risk" | "hiring" }
+  ],
+  "otherOpenings": [
+    { "title": "string", "relevance": "why this context is useful" }
+  ],
+  "preparationTips": ["specific, actionable tip based only on available data"]
 }`;
 
 export const EMAIL_PROMPT = `You are an expert at writing professional job application emails.

@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase.js';
+import { assessFit } from '../services/claude.js';
+import { researchCompany } from '../services/research.js';
 
 export const createApplication = async (req, res) => {
   const { jobId, status = 'saved', notes = '' } = req.body;
@@ -52,7 +54,7 @@ export const listApplications = async (req, res) => {
 export const getApplication = async (req, res) => {
   const { data: app, error } = await supabase
     .from('applications')
-    .select(`*, jobs(*), communications(*), transcripts(*, coaching_insights(*))`)
+    .select(`*, jobs(*), contacts(*), communications(*, contacts(*)), transcripts(*, coaching_insights(*))`)
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
     .single();
@@ -93,6 +95,41 @@ export const updateApplication = async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true, application: data });
+};
+
+export const fitAssessment = async (req, res) => {
+  const userId = req.user.id;
+
+  const [{ data: app, error }, { data: cvData }] = await Promise.all([
+    supabase
+      .from('applications')
+      .select('*, jobs(*)')
+      .eq('id', req.params.id)
+      .eq('user_id', userId)
+      .single(),
+    supabase
+      .from('cv_versions')
+      .select('cv_text')
+      .eq('user_id', userId)
+      .eq('is_current', true)
+      .single(),
+  ]);
+
+  if (error || !app) return res.status(404).json({ error: 'Application not found' });
+
+  const job = app.jobs;
+  const userCV = cvData?.cv_text ?? '';
+
+  const research = await researchCompany(job.company);
+  const newsText = research.news.length > 0 ? research.news.join('\n\n') : null;
+  const openingsText = research.openings.length > 0 ? research.openings.join('\n\n') : null;
+
+  try {
+    const result = await assessFit(job.description, userCV, newsText, openingsText);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 export const deleteApplication = async (req, res) => {

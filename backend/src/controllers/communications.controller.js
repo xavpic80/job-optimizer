@@ -16,9 +16,9 @@ export const createCommunication = async (req, res) => {
     return res.status(404).json({ error: 'Application not found' });
   }
 
-  const { type, direction, dateSent, fromAddress, toAddress, subject, body, status } = req.body;
-  if (!type || !body || !dateSent) {
-    return res.status(400).json({ error: 'type, body, dateSent required' });
+  const { type, contactId, dateSent, notes, direction, fromAddress, toAddress, subject, body, status } = req.body;
+  if (!type || !dateSent) {
+    return res.status(400).json({ error: 'type and dateSent required' });
   }
 
   const { data, error } = await supabase
@@ -26,12 +26,14 @@ export const createCommunication = async (req, res) => {
     .insert({
       application_id: appId,
       type,
-      direction,
+      contact_id: contactId ?? null,
       date_sent: dateSent,
-      from_address: fromAddress,
-      to_address: toAddress,
-      subject,
-      body,
+      notes: notes ?? null,
+      direction: direction ?? null,
+      from_address: fromAddress ?? null,
+      to_address: toAddress ?? null,
+      subject: subject ?? null,
+      body: body ?? notes ?? '',
       message_status: status ?? 'sent',
     })
     .select()

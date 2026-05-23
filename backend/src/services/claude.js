@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   MATCH_SCORE_PROMPT,
+  FIT_ASSESSMENT_PROMPT,
   JOB_PARSE_PROMPT,
   CV_OPTIMIZATION_PROMPT,
   COVER_LETTER_PROMPT,
@@ -66,4 +67,11 @@ export const scoreMatch = (jobDescription, userCV) =>
     MATCH_SCORE_PROMPT,
     `CV:\n\n${userCV.slice(0, 4000)}\n\n---\n\nJob Description:\n\n${jobDescription.slice(0, 4000)}`,
     500
+  );
+
+export const assessFit = (jobDescription, userCV, companyResearch, otherOpenings) =>
+  callClaude(
+    FIT_ASSESSMENT_PROMPT,
+    `CANDIDATE CV:\n${userCV || '(No CV on file)'}\n\n---\n\nJOB DESCRIPTION:\n${jobDescription.slice(0, 5000)}\n\n---\n\nCOMPANY RESEARCH:\n${companyResearch || '(No data retrieved)'}\n\n---\n\nOTHER OPENINGS:\n${otherOpenings || '(No data retrieved)'}`,
+    2000
   );
