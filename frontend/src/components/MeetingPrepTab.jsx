@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   CalendarCheck, Loader, RefreshCw, MessageSquare, HelpCircle,
-  TrendingUp, AlertCircle, Target, Info, ChevronDown, ChevronUp,
+  TrendingUp, AlertCircle, Target, Info, ChevronDown, ChevronUp, User,
 } from 'lucide-react';
 import api from '../api/client.js';
 
