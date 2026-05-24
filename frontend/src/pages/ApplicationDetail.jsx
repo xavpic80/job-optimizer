@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon,
+  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon, Loader,
 } from 'lucide-react';
 import api from '../api/client.js';
 import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
@@ -32,6 +32,7 @@ export default function ApplicationDetail() {
   const [optimizing, setOptimizing] = useState(false);
   const [optimizations, setOptimizations] = useState(null);
   const [optimizedAt, setOptimizedAt] = useState(null);
+  const [fetchingOptimize, setFetchingOptimize] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
   // contacts shared between Contacts tab and Communications tab
   const [contacts, setContacts] = useState([]);
@@ -58,17 +59,16 @@ export default function ApplicationDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Load cached optimize results
+  // Load optimize results from server cache (cross-device)
   useEffect(() => {
     if (!id) return;
-    try {
-      const cached = localStorage.getItem(`optimize_${id}`);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        setOptimizations(data);
-        setOptimizedAt(timestamp);
-      }
-    } catch {}
+    setFetchingOptimize(true);
+    api.get(`/api/applications/${id}/ai-output?type=optimize`)
+      .then(({ data, generatedAt }) => {
+        if (data) { setOptimizations(data); setOptimizedAt(generatedAt); }
+      })
+      .catch(() => {})
+      .finally(() => setFetchingOptimize(false));
   }, [id]);
 
   // Load contacts once (shared between tabs)
@@ -119,10 +119,8 @@ export default function ApplicationDetail() {
       const data = await api.post(`/api/applications/${id}/optimize`, {
         outputFormats: ['cv', 'cover_letter', 'email', 'interview_prep'],
       });
-      const timestamp = new Date().toISOString();
       setOptimizations(data.optimizations);
-      setOptimizedAt(timestamp);
-      localStorage.setItem(`optimize_${id}`, JSON.stringify({ data: data.optimizations, timestamp }));
+      setOptimizedAt(new Date().toISOString());
     } catch (err) {
       alert(err.error ?? 'Optimization failed');
     } finally {
@@ -348,7 +346,12 @@ export default function ApplicationDetail() {
         {/* ── Optimize ─────────────────────────────────────────────────────── */}
         {tab === 'AI CV & Prep' && (
           <div className="space-y-4">
-            {!optimizations && (
+            {fetchingOptimize && (
+              <div className="flex justify-center py-12">
+                <Loader className="w-5 h-5 animate-spin text-slate-500" />
+              </div>
+            )}
+            {!optimizations && !fetchingOptimize && (
               <div className="text-center py-10">
                 <Zap className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
                 <p className="text-slate-400 mb-6">Generate AI-powered optimizations for your CV, cover letter, email, and interview prep.</p>

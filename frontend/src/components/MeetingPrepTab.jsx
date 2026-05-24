@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import api from '../api/client.js';
 
-const cacheKey = (appId, contactId) => `meeting_prep_${appId}_${contactId ?? 'none'}`;
 
 function Section({ icon: Icon, color, title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -40,6 +39,7 @@ export default function MeetingPrepTab({ appId }) {
   const [prep, setPrep] = useState(null);
   const [prepAt, setPrepAt] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
 
   // Load contacts
@@ -52,18 +52,18 @@ export default function MeetingPrepTab({ appId }) {
       .catch(() => {});
   }, [appId]);
 
-  // Restore cache when contact changes
+  // Fetch server cache when contact selection changes
   useEffect(() => {
     setPrep(null);
     setPrepAt(null);
-    try {
-      const cached = localStorage.getItem(cacheKey(appId, contactId || null));
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        setPrep(data);
-        setPrepAt(timestamp);
-      }
-    } catch {}
+    setFetching(true);
+    const qs = contactId ? `?type=meeting_prep&contactId=${contactId}` : '?type=meeting_prep';
+    api.get(`/api/applications/${appId}/ai-output${qs}`)
+      .then(({ data, generatedAt }) => {
+        if (data) { setPrep(data); setPrepAt(generatedAt); }
+      })
+      .catch(() => {})
+      .finally(() => setFetching(false));
   }, [appId, contactId]);
 
   const generate = async () => {
@@ -73,10 +73,8 @@ export default function MeetingPrepTab({ appId }) {
       const data = await api.post(`/api/applications/${appId}/meeting-prep`, {
         contactId: contactId || null,
       });
-      const timestamp = new Date().toISOString();
       setPrep(data);
-      setPrepAt(timestamp);
-      localStorage.setItem(cacheKey(appId, contactId || null), JSON.stringify({ data, timestamp }));
+      setPrepAt(new Date().toISOString());
     } catch (err) {
       setError(err.error ?? 'Generation failed');
     } finally {
@@ -134,6 +132,13 @@ export default function MeetingPrepTab({ appId }) {
           </div>
         )}
       </div>
+
+      {/* Loading from server */}
+      {fetching && (
+        <div className="flex justify-center py-8">
+          <Loader className="w-5 h-5 animate-spin text-slate-500" />
+        </div>
+      )}
 
       {/* Stale-prep banner */}
       {(prepIsStale || bgNeverUsed) && !loading && (

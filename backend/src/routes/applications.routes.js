@@ -5,6 +5,7 @@ import {
   updateApplication, deleteApplication, fitAssessment, meetingPrep,
 } from '../controllers/applications.controller.js';
 import { commsCoach } from '../controllers/commsCoach.controller.js';
+import { fetchAiOutput } from '../controllers/aiOutputs.controller.js';
 import {
   createCommunication, listCommunications,
 } from '../controllers/communications.controller.js';
@@ -28,6 +29,7 @@ router.get('/:id', getApplication);
 router.patch('/:id', updateApplication);
 router.delete('/:id', deleteApplication);
 
+router.get('/:id/ai-output', fetchAiOutput);
 router.post('/:id/fit-assessment', fitAssessment);
 router.post('/:id/meeting-prep', meetingPrep);
 router.post('/:id/comms-coach', commsCoach);

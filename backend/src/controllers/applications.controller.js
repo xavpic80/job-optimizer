@@ -1,6 +1,7 @@
 import supabase from '../lib/supabase.js';
 import { assessFit, generateMeetingPrep } from '../services/claude.js';
 import { researchCompany, researchContact } from '../services/research.js';
+import { saveAiOutput } from '../services/aiOutputCache.js';
 
 export const createApplication = async (req, res) => {
   const { jobId, status = 'saved', notes = '' } = req.body;
@@ -133,6 +134,7 @@ export const fitAssessment = async (req, res) => {
 
   try {
     const result = await assessFit(job.description, userCV, newsText, openingsText, profileAssets);
+    saveAiOutput(userId, req.params.id, 'fit_assessment', null, result).catch(() => {});
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -244,6 +246,7 @@ export const meetingPrep = async (req, res) => {
       mpProfileAssets,
       aiBackgroundText
     );
+    saveAiOutput(userId, req.params.id, 'meeting_prep', contactId ?? null, result).catch(() => {});
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -5,8 +5,6 @@ import {
 } from 'lucide-react';
 import api from '../api/client.js';
 
-const cacheKey = (appId) => `comms_coach_${appId}`;
-
 const TONE_COLORS = {
   positive: 'bg-green-500/10 border-green-500/20 text-green-300',
   neutral:  'bg-yellow-500/10 border-yellow-500/20 text-yellow-300',
@@ -60,18 +58,18 @@ export default function CommsCoachTab({ appId }) {
   const [coaching, setCoaching] = useState(null);
   const [coachedAt, setCoachedAt] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
 
-  // Restore from cache
+  // Load from server cache on mount (cross-device)
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(cacheKey(appId));
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        setCoaching(data);
-        setCoachedAt(timestamp);
-      }
-    } catch {}
+    setFetching(true);
+    api.get(`/api/applications/${appId}/ai-output?type=comms_coach`)
+      .then(({ data, generatedAt }) => {
+        if (data) { setCoaching(data); setCoachedAt(generatedAt); }
+      })
+      .catch(() => {})
+      .finally(() => setFetching(false));
   }, [appId]);
 
   const generate = async () => {
@@ -79,16 +77,16 @@ export default function CommsCoachTab({ appId }) {
     setError('');
     try {
       const data = await api.post(`/api/applications/${appId}/comms-coach`, {});
-      const timestamp = new Date().toISOString();
       setCoaching(data);
-      setCoachedAt(timestamp);
-      localStorage.setItem(cacheKey(appId), JSON.stringify({ data, timestamp }));
+      setCoachedAt(new Date().toISOString());
     } catch (err) {
       setError(err.error ?? 'Generation failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) return <div className="flex justify-center py-12"><Loader className="w-5 h-5 animate-spin text-slate-500" /></div>;
 
   return (
     <div className="space-y-4">

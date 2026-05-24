@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Target, TrendingUp, AlertCircle, Globe, Briefcase, CheckCircle, Loader, RefreshCw } from 'lucide-react';
 import api from '../api/client.js';
 
-const cacheKey = (appId) => `fit_assessment_${appId}`;
-
 const TYPE_COLORS = {
   news: 'text-blue-300',
   culture: 'text-purple-300',
@@ -32,17 +30,18 @@ export default function FitAssessmentTab({ appId, job, existingScore }) {
   const [assessment, setAssessment] = useState(null);
   const [assessedAt, setAssessedAt] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
 
+  // Load from server cache on mount (cross-device)
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(cacheKey(appId));
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        setAssessment(data);
-        setAssessedAt(timestamp);
-      }
-    } catch {}
+    setFetching(true);
+    api.get(`/api/applications/${appId}/ai-output?type=fit_assessment`)
+      .then(({ data, generatedAt }) => {
+        if (data) { setAssessment(data); setAssessedAt(generatedAt); }
+      })
+      .catch(() => {})
+      .finally(() => setFetching(false));
   }, [appId]);
 
   const runAssessment = async () => {
@@ -50,16 +49,16 @@ export default function FitAssessmentTab({ appId, job, existingScore }) {
     setError('');
     try {
       const data = await api.post(`/api/applications/${appId}/fit-assessment`);
-      const timestamp = new Date().toISOString();
       setAssessment(data);
-      setAssessedAt(timestamp);
-      localStorage.setItem(cacheKey(appId), JSON.stringify({ data, timestamp }));
+      setAssessedAt(new Date().toISOString());
     } catch (err) {
       setError(err.error ?? 'Assessment failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) return <div className="flex justify-center py-12"><Loader className="w-5 h-5 animate-spin text-slate-500" /></div>;
 
   return (
     <div className="space-y-4">

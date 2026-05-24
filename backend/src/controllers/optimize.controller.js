@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase.js';
 import * as claude from '../services/claude.js';
+import { saveAiOutput } from '../services/aiOutputCache.js';
 
 export const optimizeApplication = async (req, res) => {
   const { id: appId } = req.params;
@@ -58,6 +59,11 @@ export const optimizeApplication = async (req, res) => {
     run('email', () => claude.generateEmail(job, cv.cv_text, profileAssets)),
     run('interview_prep', () => claude.generateInterviewPrep(job, cv.cv_text, profileAssets)),
   ]);
+
+  // Save bundle to cross-device cache
+  if (Object.keys(optimizations).length > 0) {
+    saveAiOutput(userId, appId, 'optimize', null, optimizations).catch(() => {});
+  }
 
   res.json({ success: true, jobId: job.id, applicationId: appId, matchScore: job.match_score, optimizations, errors });
 };

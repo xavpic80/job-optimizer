@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase.js';
 import { generateCommsCoach } from '../services/claude.js';
+import { saveAiOutput } from '../services/aiOutputCache.js';
 
 export const commsCoach = async (req, res) => {
   const userId = req.user.id;
@@ -57,6 +58,7 @@ export const commsCoach = async (req, res) => {
       communicationsText,
       transcriptsText
     );
+    saveAiOutput(userId, req.params.id, 'comms_coach', null, result).catch(() => {});
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
