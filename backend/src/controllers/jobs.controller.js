@@ -119,7 +119,7 @@ export const getJob = async (req, res) => {
 };
 
 export const updateJob = async (req, res) => {
-  const { postingDate } = req.body;
+  const { postingDate, title, company, description } = req.body;
   const { data: existing } = await supabase
     .from('jobs')
     .select('id')
@@ -130,7 +130,10 @@ export const updateJob = async (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Job not found' });
 
   const updates = {};
-  if (postingDate !== undefined) updates.posting_date = postingDate || null;
+  if (postingDate  !== undefined) updates.posting_date = postingDate || null;
+  if (title        !== undefined && title.trim())       updates.title       = title.trim();
+  if (company      !== undefined && company.trim())     updates.company     = company.trim();
+  if (description  !== undefined && description.trim()) updates.description = description.trim();
 
   const { data, error } = await supabase
     .from('jobs')

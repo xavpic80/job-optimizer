@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar,
+  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon,
 } from 'lucide-react';
 import api from '../api/client.js';
 import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
@@ -39,6 +39,14 @@ export default function ApplicationDetail() {
   const [editingDate, setEditingDate] = useState(false);
   const [postingDate, setPostingDate] = useState('');
   const [savingDate, setSavingDate] = useState(false);
+  // job fields editing
+  const [editingTitle, setEditingTitle]       = useState(false);
+  const [editingCompany, setEditingCompany]   = useState(false);
+  const [editingDesc, setEditingDesc]         = useState(false);
+  const [draftTitle, setDraftTitle]           = useState('');
+  const [draftCompany, setDraftCompany]       = useState('');
+  const [draftDesc, setDraftDesc]             = useState('');
+  const [savingJob, setSavingJob]             = useState(false);
 
   useEffect(() => {
     api.get(`/api/applications/${id}`)
@@ -78,6 +86,17 @@ export default function ApplicationDetail() {
       setApp((prev) => ({ ...prev, ...updated.application }));
     } finally {
       setStatusChanging(false);
+    }
+  };
+
+  const saveJobField = async (field, value, onDone) => {
+    setSavingJob(true);
+    try {
+      const updated = await api.patch(`/api/jobs/${app.jobs.id}`, { [field]: value });
+      setApp((prev) => ({ ...prev, jobs: { ...prev.jobs, ...updated.job } }));
+      onDone();
+    } catch { /* silently ignore */ } finally {
+      setSavingJob(false);
     }
   };
 
@@ -130,8 +149,46 @@ export default function ApplicationDetail() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="font-semibold text-white truncate">{job.title}</h1>
-            <p className="text-xs text-slate-400">{job.company}</p>
+            {editingTitle ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  className="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-sm font-semibold text-white focus:outline-none focus:border-cyan-500"
+                />
+                <button onClick={() => saveJobField('title', draftTitle, () => setEditingTitle(false))} disabled={savingJob} className="text-cyan-400 hover:text-cyan-300 disabled:opacity-50"><Check className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setEditingTitle(false)} className="text-slate-500 hover:text-white"><XIcon className="w-3.5 h-3.5" /></button>
+              </div>
+            ) : (
+              <button
+                className="group flex items-center gap-1.5 text-left w-full"
+                onClick={() => { setDraftTitle(job.title ?? ''); setEditingTitle(true); }}
+              >
+                <h1 className="font-semibold text-white truncate">{job.title}</h1>
+                <Pencil className="w-3 h-3 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors" />
+              </button>
+            )}
+            {editingCompany ? (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <input
+                  autoFocus
+                  value={draftCompany}
+                  onChange={(e) => setDraftCompany(e.target.value)}
+                  className="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                />
+                <button onClick={() => saveJobField('company', draftCompany, () => setEditingCompany(false))} disabled={savingJob} className="text-cyan-400 hover:text-cyan-300 disabled:opacity-50"><Check className="w-3 h-3" /></button>
+                <button onClick={() => setEditingCompany(false)} className="text-slate-500 hover:text-white"><XIcon className="w-3 h-3" /></button>
+              </div>
+            ) : (
+              <button
+                className="group flex items-center gap-1 text-left"
+                onClick={() => { setDraftCompany(job.company ?? ''); setEditingCompany(true); }}
+              >
+                <p className="text-xs text-slate-400">{job.company}</p>
+                <Pencil className="w-2.5 h-2.5 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors" />
+              </button>
+            )}
           </div>
           <button onClick={deleteApp} className="text-slate-600 hover:text-red-400 transition-colors">
             <Trash2 className="w-4 h-4" />
@@ -224,8 +281,45 @@ export default function ApplicationDetail() {
             </div>
 
             <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
-              <h2 className="font-semibold text-white mb-3">Job Description</h2>
-              <p className="text-sm text-slate-300 whitespace-pre-wrap">{job.description}</p>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-white">Job Description</h2>
+                {!editingDesc && (
+                  <button
+                    onClick={() => { setDraftDesc(job.description ?? ''); setEditingDesc(true); }}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    <Pencil className="w-3 h-3" /> Edit
+                  </button>
+                )}
+              </div>
+              {editingDesc ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={draftDesc}
+                    onChange={(e) => setDraftDesc(e.target.value)}
+                    rows={16}
+                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 resize-y font-mono leading-relaxed"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => saveJobField('description', draftDesc, () => setEditingDesc(false))}
+                      disabled={savingJob}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-medium hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+                    >
+                      <Check className="w-3 h-3" />
+                      {savingJob ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingDesc(false)}
+                      className="text-xs text-slate-400 hover:text-white transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">{job.description}</p>
+              )}
             </div>
             {app.notes && (
               <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
