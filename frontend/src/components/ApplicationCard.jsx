@@ -11,12 +11,13 @@ const STATUS_STYLES = {
   final_round:           'bg-orange-500/20 text-orange-300',
   offer:                 'bg-green-500/20 text-green-300',
   rejected:              'bg-red-500/20 text-red-300',
+  not_applying:          'bg-slate-700/30 text-slate-500',
 };
 
 const STATUS_LABELS = {
   saved: 'Saved', applied: 'Applied', screening: 'Screening',
   interview_scheduled: 'Interview Scheduled', interview_completed: 'Interview Completed',
-  final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
+  final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected', not_applying: 'Not Applying',
 };
 
 export default function ApplicationCard({ application }) {

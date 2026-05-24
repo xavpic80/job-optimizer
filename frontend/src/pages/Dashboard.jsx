@@ -8,13 +8,13 @@ import ApplicationCard from '../components/ApplicationCard.jsx';
 
 const STATUSES = [
   'all', 'saved', 'applied', 'screening',
-  'interview_scheduled', 'interview_completed', 'final_round', 'offer', 'rejected',
+  'interview_scheduled', 'interview_completed', 'final_round', 'offer', 'rejected', 'not_applying',
 ];
 
 const STATUS_LABELS = {
   all: 'All', saved: 'Saved', applied: 'Applied', screening: 'Screening',
   interview_scheduled: 'Interview', interview_completed: 'Interviewed',
-  final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
+  final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected', not_applying: 'Not Applying',
 };
 
 const PIPELINE_STATUSES = ['screening', 'interview_scheduled', 'interview_completed', 'final_round'];

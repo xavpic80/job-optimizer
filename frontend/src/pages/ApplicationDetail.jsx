@@ -12,13 +12,13 @@ import CommsCoachTab from '../components/CommsCoachTab.jsx';
 
 const STATUS_OPTIONS = [
   'saved', 'applied', 'screening', 'interview_scheduled',
-  'interview_completed', 'final_round', 'offer', 'rejected',
+  'interview_completed', 'final_round', 'offer', 'rejected', 'not_applying',
 ];
 
 const STATUS_LABELS = {
   saved: 'Saved', applied: 'Applied', screening: 'Screening',
   interview_scheduled: 'Interview Scheduled', interview_completed: 'Interview Completed',
-  final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
+  final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected', not_applying: 'Not Applying',
 };
 
 const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Contacts', 'Communications', 'Comms Coach', 'Meeting Prep'];
