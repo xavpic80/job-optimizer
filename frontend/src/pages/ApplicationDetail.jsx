@@ -21,7 +21,7 @@ const STATUS_LABELS = {
   final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected', not_applying: 'Not Applying',
 };
 
-const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Contacts', 'Communications', 'Comms Coach', 'Meeting Prep'];
+const TABS = ['Overview', 'Fit Assessment', 'AI CV & Prep', 'Contacts', 'Communications', 'Comms Coach', 'Meeting Prep'];
 
 export default function ApplicationDetail() {
   const { id } = useParams();
@@ -346,7 +346,7 @@ export default function ApplicationDetail() {
         )}
 
         {/* ── Optimize ─────────────────────────────────────────────────────── */}
-        {tab === 'Optimize' && (
+        {tab === 'AI CV & Prep' && (
           <div className="space-y-4">
             {!optimizations && (
               <div className="text-center py-10">
