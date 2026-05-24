@@ -11,7 +11,7 @@ import {
 import { scoreMatch } from '../services/claude.js';
 
 export const parseJob = async (req, res) => {
-  const { input, userCV } = req.body;
+  const { input, userCV, titleOverride, companyOverride } = req.body;
   const userId = req.user.id;
 
   if (!input) return res.status(400).json({ error: 'input required' });
@@ -32,6 +32,14 @@ export const parseJob = async (req, res) => {
   } catch (err) {
     return res.status(422).json({ error: err.message });
   }
+
+  // Apply manual overrides — user knows better than the parser
+  if (titleOverride?.trim())   jobData.title   = titleOverride.trim();
+  if (companyOverride?.trim()) jobData.company = companyOverride.trim();
+
+  // Final guard: company is NOT NULL in the DB
+  if (!jobData.company) return res.status(422).json({ error: 'Could not detect company name — please fill in the Company field.' });
+  if (!jobData.title)   jobData.title = 'Untitled';
 
   jobData.keywords = extractKeywords(jobData.description);
   if (userCV) {
