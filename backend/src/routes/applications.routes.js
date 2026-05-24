@@ -4,6 +4,7 @@ import {
   createApplication, listApplications, getApplication,
   updateApplication, deleteApplication, fitAssessment, meetingPrep,
 } from '../controllers/applications.controller.js';
+import { commsCoach } from '../controllers/commsCoach.controller.js';
 import {
   createCommunication, listCommunications,
 } from '../controllers/communications.controller.js';
@@ -29,6 +30,7 @@ router.delete('/:id', deleteApplication);
 
 router.post('/:id/fit-assessment', fitAssessment);
 router.post('/:id/meeting-prep', meetingPrep);
+router.post('/:id/comms-coach', commsCoach);
 
 router.get('/:id/contacts', listContacts);
 router.post('/:id/contacts', createContact);

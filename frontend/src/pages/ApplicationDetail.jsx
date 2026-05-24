@@ -8,6 +8,7 @@ import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
 import CommunicationsTab from '../components/CommunicationsTab.jsx';
 import MeetingPrepTab from '../components/MeetingPrepTab.jsx';
 import ContactsTab from '../components/ContactsTab.jsx';
+import CommsCoachTab from '../components/CommsCoachTab.jsx';
 
 const STATUS_OPTIONS = [
   'saved', 'applied', 'screening', 'interview_scheduled',
@@ -20,7 +21,7 @@ const STATUS_LABELS = {
   final_round: 'Final Round', offer: 'Offer', rejected: 'Rejected',
 };
 
-const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Contacts', 'Communications', 'Meeting Prep'];
+const TABS = ['Overview', 'Fit Assessment', 'Optimize', 'Contacts', 'Communications', 'Comms Coach', 'Meeting Prep'];
 
 export default function ApplicationDetail() {
   const { id } = useParams();
@@ -329,6 +330,11 @@ export default function ApplicationDetail() {
             initialCommunications={app.communications ?? []}
             initialTranscripts={app.transcripts ?? []}
           />
+        )}
+
+        {/* ── Comms Coach ──────────────────────────────────────────────────── */}
+        {tab === 'Comms Coach' && (
+          <CommsCoachTab appId={id} />
         )}
 
         {/* ── Meeting Prep ─────────────────────────────────────────────────── */}

@@ -10,6 +10,7 @@ import {
   INTERVIEW_PREP_PROMPT,
   TRANSCRIPT_ANALYSIS_PROMPT,
   EMAIL_PROMPT,
+  COMMS_COACH_PROMPT,
 } from '../lib/prompts.js';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -114,4 +115,11 @@ export const generateContactBackground = (contactInfo, linkedinText, webResearch
     CONTACT_BACKGROUND_PROMPT,
     `CONTACT DETAILS:\n${contactInfo}\n\n---\n\nLINKEDIN PROFILE TEXT:\n${linkedinText || '(Not provided)'}\n\n---\n\nWEB RESEARCH:\n${webResearch || '(No data found)'}`,
     2000
+  );
+
+export const generateCommsCoach = (jobDescription, userCV, communicationsText, transcriptsText) =>
+  callClaude(
+    COMMS_COACH_PROMPT,
+    `JOB DESCRIPTION:\n${jobDescription?.slice(0, 3000) || '(Not provided)'}\n\n---\n\nCANDIDATE CV:\n${userCV?.slice(0, 3000) || '(Not provided)'}\n\n---\n\nCOMMUNICATIONS (chronological):\n${communicationsText || '(None logged)'}\n\n---\n\nINTERVIEW TRANSCRIPTS:\n${transcriptsText || '(None)'}`,
+    3000
   );
