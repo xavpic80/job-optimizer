@@ -125,9 +125,8 @@ export default function CVPage() {
     form.append('name', assetForm.name);
     form.append('assetType', assetForm.assetType);
     try {
-      const { asset } = await api.post('/api/assets/upload', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Do NOT set Content-Type manually — axios must generate the multipart boundary
+      const { asset } = await api.post('/api/assets/upload', form);
       setAssets((prev) => [asset, ...prev]);
       setAssetForm({ name: '', assetType: 'portfolio', text: '' });
       setShowAssetForm(false);
@@ -352,8 +351,19 @@ export default function CVPage() {
               </div>
             </div>
 
+            {/* Dismiss button always visible */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => { setShowAssetForm(false); setAssetError(''); setAssetPdfStatus(null); }}
+                className="text-slate-500 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
             {assetMode === 'text' ? (
-              <form onSubmit={saveAsset}>
+              <form onSubmit={saveAsset} className="-mt-1">
                 <label className="text-xs text-slate-400 mb-1 block">Content *</label>
                 <textarea
                   value={assetForm.text}
@@ -371,45 +381,39 @@ export default function CVPage() {
                   >
                     {savingAsset ? 'Saving…' : 'Save Asset'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowAssetForm(false); setAssetError(''); }}
-                    className="text-slate-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               </form>
             ) : (
-              <div>
+              <div className="-mt-1">
+                {/* Hidden file input */}
                 <input
                   ref={assetFileRef}
                   type="file"
                   accept="application/pdf"
                   className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleAssetPdf(e.target.files[0])}
+                  onChange={(e) => { if (e.target.files?.[0]) handleAssetPdf(e.target.files[0]); }}
                 />
-                {assetError && <p className="text-sm text-red-400 mb-2">{assetError}</p>}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => assetFileRef.current?.click()}
-                    disabled={!!assetPdfStatus}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 disabled:opacity-50 transition-colors"
-                  >
-                    {assetPdfStatus === 'parsing' ? (
-                      <><Loader className="w-4 h-4 animate-spin" /> Parsing PDF…</>
-                    ) : (
-                      <><Upload className="w-4 h-4" /> Choose PDF</>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => { setShowAssetForm(false); setAssetError(''); }}
-                    className="text-slate-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500 mt-2">Text will be extracted automatically for AI use.</p>
+                {/* Single clickable drop zone */}
+                <button
+                  type="button"
+                  onClick={() => assetFileRef.current?.click()}
+                  disabled={!!assetPdfStatus}
+                  className="w-full flex flex-col items-center gap-2 py-8 border-2 border-dashed border-slate-600 hover:border-cyan-500 rounded-xl text-slate-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {assetPdfStatus === 'parsing' ? (
+                    <>
+                      <Loader className="w-6 h-6 animate-spin text-cyan-400" />
+                      <span className="text-sm font-medium text-cyan-400">Extracting text from PDF…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6" />
+                      <span className="text-sm font-medium">Click to select a PDF</span>
+                      <span className="text-xs text-slate-500">Text extracted automatically for AI use</span>
+                    </>
+                  )}
+                </button>
+                {assetError && <p className="text-sm text-red-400 mt-2">{assetError}</p>}
               </div>
             )}
           </div>
