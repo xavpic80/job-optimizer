@@ -42,6 +42,9 @@ export default function CVPage() {
   const [savingAsset, setSavingAsset] = useState(false);
   const [assetError, setAssetError] = useState('');
   const assetFileRef = useRef(null);
+  // Ref always holds latest assetForm — avoids stale closure in file input onChange
+  const assetFormRef = useRef(assetForm);
+  assetFormRef.current = assetForm;
 
   useEffect(() => {
     Promise.all([
@@ -114,7 +117,9 @@ export default function CVPage() {
       setAssetError('Please select a PDF file');
       return;
     }
-    if (!assetForm.name.trim()) {
+    // Read from ref — avoids stale closure when called from file input onChange
+    const { name, assetType } = assetFormRef.current;
+    if (!name.trim()) {
       setAssetError('Please enter a name first');
       return;
     }
@@ -122,8 +127,8 @@ export default function CVPage() {
     setAssetError('');
     const form = new FormData();
     form.append('pdf', file);
-    form.append('name', assetForm.name);
-    form.append('assetType', assetForm.assetType);
+    form.append('name', name);
+    form.append('assetType', assetType);
     try {
       // Do NOT set Content-Type manually — axios must generate the multipart boundary
       const { asset } = await api.post('/api/assets/upload', form);
@@ -332,7 +337,10 @@ export default function CVPage() {
                 <label className="text-xs text-slate-400 mb-1 block">Asset Name *</label>
                 <input
                   value={assetForm.name}
-                  onChange={(e) => setAssetForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => {
+                    setAssetForm((f) => ({ ...f, name: e.target.value }));
+                    if (assetError) setAssetError('');
+                  }}
                   placeholder="e.g. AWS Certificate, Portfolio 2024"
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
                 />
@@ -396,7 +404,14 @@ export default function CVPage() {
                 {/* Single clickable drop zone */}
                 <button
                   type="button"
-                  onClick={() => assetFileRef.current?.click()}
+                  onClick={() => {
+                    if (!assetFormRef.current.name.trim()) {
+                      setAssetError('Please enter a name above first');
+                      return;
+                    }
+                    setAssetError('');
+                    assetFileRef.current?.click();
+                  }}
                   disabled={!!assetPdfStatus}
                   className="w-full flex flex-col items-center gap-2 py-8 border-2 border-dashed border-slate-600 hover:border-cyan-500 rounded-xl text-slate-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
