@@ -62,7 +62,7 @@ export const optimizeApplication = async (req, res) => {
 
   // Save bundle to cross-device cache
   if (Object.keys(optimizations).length > 0) {
-    saveAiOutput(userId, appId, 'optimize', null, optimizations).catch((e) => console.error('[optimize] bundle cache save failed:', e.message));
+    await saveAiOutput(userId, appId, 'optimize', null, optimizations);
   }
 
   res.json({ success: true, jobId: job.id, applicationId: appId, matchScore: job.match_score, optimizations, errors });

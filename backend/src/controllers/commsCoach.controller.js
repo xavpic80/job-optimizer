@@ -58,7 +58,7 @@ export const commsCoach = async (req, res) => {
       communicationsText,
       transcriptsText
     );
-    saveAiOutput(userId, req.params.id, 'comms_coach', null, result).catch((e) => console.error('[commsCoach] cache save failed:', e.message));
+    await saveAiOutput(userId, req.params.id, 'comms_coach', null, result);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
