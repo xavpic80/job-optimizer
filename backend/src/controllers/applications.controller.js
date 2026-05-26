@@ -134,7 +134,7 @@ export const fitAssessment = async (req, res) => {
 
   try {
     const result = await assessFit(job.description, userCV, newsText, openingsText, profileAssets);
-    saveAiOutput(userId, req.params.id, 'fit_assessment', null, result).catch(() => {});
+    saveAiOutput(userId, req.params.id, 'fit_assessment', null, result).catch((e) => console.error('[fitAssessment] cache save failed:', e.message));
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -246,7 +246,7 @@ export const meetingPrep = async (req, res) => {
       mpProfileAssets,
       aiBackgroundText
     );
-    saveAiOutput(userId, req.params.id, 'meeting_prep', contactId ?? null, result).catch(() => {});
+    saveAiOutput(userId, req.params.id, 'meeting_prep', contactId ?? null, result).catch((e) => console.error('[meetingPrep] cache save failed:', e.message));
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

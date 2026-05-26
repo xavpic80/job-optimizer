@@ -17,8 +17,13 @@ export const fetchAiOutput = async (req, res) => {
 
   if (!app) return res.status(404).json({ error: 'Application not found' });
 
-  const result = await getAiOutput(appId, type, contactId ?? null);
-
-  if (!result) return res.json({ data: null, generatedAt: null });
-  res.json({ data: result.data, generatedAt: result.generated_at });
+  try {
+    const result = await getAiOutput(appId, type, contactId ?? null);
+    if (!result) return res.json({ data: null, generatedAt: null });
+    return res.json({ data: result.data, generatedAt: result.generated_at });
+  } catch (err) {
+    // Return a cache miss rather than a 500 so the UI degrades gracefully
+    console.error('[fetchAiOutput] unexpected error:', err.message);
+    return res.json({ data: null, generatedAt: null });
+  }
 };
