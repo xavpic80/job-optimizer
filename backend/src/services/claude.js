@@ -27,6 +27,10 @@ const callClaude = async (systemPrompt, userContent, maxTokens = 2000) => {
     system: systemPrompt,
     messages: [{ role: 'user', content: userContent }],
   });
+  // Detect truncation before attempting JSON.parse
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error('Response was cut off — the output was too long. Please try again.');
+  }
   return JSON.parse(stripMarkdown(response.content[0].text));
 };
 
@@ -45,7 +49,8 @@ export const optimizeCV = (jobDescription, userCV, profileAssets = null) =>
     withAssets(
       `CV:\n\n${userCV}\n\n---\n\nJob Description:\n\n${jobDescription}`,
       profileAssets
-    )
+    ),
+    3000
   );
 
 export const generateCoverLetter = (job, userCV, profileAssets = null) =>
@@ -54,7 +59,8 @@ export const generateCoverLetter = (job, userCV, profileAssets = null) =>
     withAssets(
       `CV:\n\n${userCV}\n\n---\n\nJob Title: ${job.title}\nCompany: ${job.company}\n\nJob Description:\n\n${job.description}`,
       profileAssets
-    )
+    ),
+    2500
   );
 
 export const generateEmail = (job, userCV, profileAssets = null) =>
@@ -63,7 +69,8 @@ export const generateEmail = (job, userCV, profileAssets = null) =>
     withAssets(
       `CV:\n\n${userCV}\n\n---\n\nJob Title: ${job.title}\nCompany: ${job.company}\n\nJob Description:\n\n${job.description}`,
       profileAssets
-    )
+    ),
+    1500
   );
 
 export const generateInterviewPrep = (job, userCV, profileAssets = null) =>
@@ -107,7 +114,7 @@ export const assessFit = (jobDescription, userCV, companyResearch, otherOpenings
       `CANDIDATE CV:\n${userCV || '(No CV on file)'}\n\n---\n\nJOB DESCRIPTION:\n${jobDescription.slice(0, 5000)}\n\n---\n\nCOMPANY RESEARCH:\n${companyResearch || '(No data retrieved)'}\n\n---\n\nOTHER OPENINGS:\n${otherOpenings || '(No data retrieved)'}`,
       profileAssets
     ),
-    2000
+    4000  // raised from 2000 — rich CVs + company research easily exceeded the limit
   );
 
 export const generateContactBackground = (contactInfo, linkedinText, webResearch) =>
