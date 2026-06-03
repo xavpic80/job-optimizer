@@ -1,3 +1,4 @@
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import supabase from '../lib/supabase.js';
 import {
   isUrl,
@@ -10,8 +11,49 @@ import {
 } from '../services/scraper.js';
 import { scoreMatch } from '../services/claude.js';
 
+export const parseJobPdf = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No PDF uploaded' });
+  const userId = req.user.id;
+
+  try {
+    const parsed = await pdfParse(req.file.buffer);
+    const text = parsed.text.replace(/\n{3,}/g, '\n\n').trim();
+    if (!text) return res.status(422).json({ error: 'Could not extract text from PDF' });
+
+    // Upload original PDF to storage so we can display it later
+    const storagePath = `${userId}/jobs/${Date.now()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from('cvs')
+      .upload(storagePath, req.file.buffer, { contentType: 'application/pdf', upsert: false });
+
+    const filePath = uploadError ? null : storagePath;
+    res.json({ text, filePath });
+  } catch (err) {
+    res.status(422).json({ error: 'Failed to parse PDF: ' + err.message });
+  }
+};
+
+export const getJobPdfUrl = async (req, res) => {
+  const { data: job } = await supabase
+    .from('jobs')
+    .select('pdf_path')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
+
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (!job.pdf_path) return res.status(404).json({ error: 'No PDF stored for this job' });
+
+  const { data, error } = await supabase.storage
+    .from('cvs')
+    .createSignedUrl(job.pdf_path, 3600); // 1-hour signed URL
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ url: data.signedUrl });
+};
+
 export const parseJob = async (req, res) => {
-  const { input, userCV, titleOverride, companyOverride } = req.body;
+  const { input, userCV, titleOverride, companyOverride, pdfPath } = req.body;
   const userId = req.user.id;
 
   if (!input) return res.status(400).json({ error: 'input required' });
@@ -81,6 +123,7 @@ export const parseJob = async (req, res) => {
       remote_type: jobData.remote_type ?? null,
       posted_date: jobData.posted_date ?? null,
       posting_date: req.body.postingDate ?? null,
+      pdf_path: pdfPath ?? null,
       parsed_at: new Date().toISOString(),
     })
     .select()

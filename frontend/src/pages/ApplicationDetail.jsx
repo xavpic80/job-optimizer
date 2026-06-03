@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon, Loader,
+  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon, Loader, FileText,
 } from 'lucide-react';
 import api from '../api/client.js';
 import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
@@ -277,6 +277,27 @@ export default function ApplicationDetail() {
                 </button>
               )}
             </div>
+
+            {/* Job PDF viewer */}
+            {job.pdf_path && (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3">
+                <FileText className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                <span className="text-sm text-slate-300 flex-1">Job posting PDF attached</span>
+                <button
+                  onClick={async () => {
+                    try {
+                      const { url } = await api.get(`/api/jobs/${job.id}/pdf-url`);
+                      window.open(url, '_blank');
+                    } catch {
+                      alert('Could not load PDF');
+                    }
+                  }}
+                  className="text-sm text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+                >
+                  View PDF →
+                </button>
+              </div>
+            )}
 
             <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
