@@ -104,7 +104,7 @@ export const generateMeetingPrep = (jobDescription, userCV, contactInfo, contact
       `CANDIDATE CV:\n${userCV || '(Not provided)'}\n\n---\n\nJOB DESCRIPTION:\n${jobDescription.slice(0, 4000)}\n\n---\n\nCONTACT:\n${contactInfo}\n\n---\n\nCONTACT AI BACKGROUND:\n${aiBackground || '(Not generated yet — use web research below)'}\n\n---\n\nCONTACT RESEARCH (live web snippets):\n${contactResearch || '(No data found)'}\n\n---\n\nPREVIOUS COMMUNICATIONS:\n${communications || '(None)'}\n\n---\n\nPREVIOUS TRANSCRIPTS:\n${transcripts || '(None)'}`,
       profileAssets
     ),
-    2500
+    4000  // raised from 2500 — rich CV + contact research + comms easily exceeded the limit
   );
 
 export const assessFit = (jobDescription, userCV, companyResearch, otherOpenings, profileAssets = null) =>
