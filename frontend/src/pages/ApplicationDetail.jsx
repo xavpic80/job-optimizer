@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon, Loader, FileText,
+  ArrowLeft, Zap, Download, ChevronDown, Trash2, Calendar, Pencil, Check, X as XIcon, Loader, FileText, Upload,
 } from 'lucide-react';
 import api from '../api/client.js';
 import FitAssessmentTab from '../components/FitAssessmentTab.jsx';
@@ -41,13 +41,19 @@ export default function ApplicationDetail() {
   const [postingDate, setPostingDate] = useState('');
   const [savingDate, setSavingDate] = useState(false);
   // job fields editing
-  const [editingTitle, setEditingTitle]       = useState(false);
-  const [editingCompany, setEditingCompany]   = useState(false);
-  const [editingDesc, setEditingDesc]         = useState(false);
-  const [draftTitle, setDraftTitle]           = useState('');
-  const [draftCompany, setDraftCompany]       = useState('');
-  const [draftDesc, setDraftDesc]             = useState('');
-  const [savingJob, setSavingJob]             = useState(false);
+  const [editingTitle, setEditingTitle]           = useState(false);
+  const [editingCompany, setEditingCompany]       = useState(false);
+  const [editingDesc, setEditingDesc]             = useState(false);
+  const [draftTitle, setDraftTitle]               = useState('');
+  const [draftCompany, setDraftCompany]           = useState('');
+  const [draftDesc, setDraftDesc]                 = useState('');
+  const [savingJob, setSavingJob]                 = useState(false);
+  // PDF attachment in description edit mode
+  const [editPdfPath, setEditPdfPath]             = useState(null);
+  const [editPdfName, setEditPdfName]             = useState('');
+  const [uploadingEditPdf, setUploadingEditPdf]   = useState(false);
+  const [editDragOver, setEditDragOver]           = useState(false);
+  const editPdfInputRef                           = useRef(null);
 
   useEffect(() => {
     api.get(`/api/applications/${id}`)
@@ -97,6 +103,42 @@ export default function ApplicationDetail() {
       onDone();
     } catch { /* silently ignore */ } finally {
       setSavingJob(false);
+    }
+  };
+
+  const saveDescription = async () => {
+    setSavingJob(true);
+    try {
+      const body = { description: draftDesc };
+      if (editPdfPath !== null) body.pdfPath = editPdfPath; // only send if user attached a new PDF
+      const updated = await api.patch(`/api/jobs/${app.jobs.id}`, body);
+      setApp((prev) => ({ ...prev, jobs: { ...prev.jobs, ...updated.job } }));
+      setEditingDesc(false);
+      setEditPdfPath(null);
+      setEditPdfName('');
+    } catch { /* silently ignore */ } finally {
+      setSavingJob(false);
+    }
+  };
+
+  const handleEditPdf = async (file) => {
+    if (!file || file.type !== 'application/pdf') return;
+    if (file.size > 4 * 1024 * 1024) {
+      alert('PDF is too large (max 4 MB). Please paste the text directly.');
+      return;
+    }
+    setUploadingEditPdf(true);
+    try {
+      const form = new FormData();
+      form.append('pdf', file);
+      const { text, filePath } = await api.post('/api/jobs/parse-pdf', form);
+      setDraftDesc(text);
+      setEditPdfPath(filePath);
+      setEditPdfName(file.name);
+    } catch (err) {
+      alert(err.error ?? 'Failed to extract PDF text');
+    } finally {
+      setUploadingEditPdf(false);
     }
   };
 
@@ -313,6 +355,46 @@ export default function ApplicationDetail() {
               </div>
               {editingDesc ? (
                 <div className="space-y-2">
+                  {/* PDF drop zone */}
+                  {editPdfName ? (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                      <FileText className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                      <span className="text-xs text-cyan-300 flex-1 truncate">{editPdfName}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setEditPdfPath(null); setEditPdfName(''); }}
+                        className="text-slate-500 hover:text-white transition-colors"
+                      >
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setEditDragOver(true); }}
+                      onDragLeave={() => setEditDragOver(false)}
+                      onDrop={(e) => { e.preventDefault(); setEditDragOver(false); handleEditPdf(e.dataTransfer.files[0]); }}
+                      onClick={() => editPdfInputRef.current?.click()}
+                      className={`border border-dashed rounded-lg px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors ${
+                        editDragOver
+                          ? 'border-cyan-400 bg-cyan-500/10'
+                          : 'border-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      {uploadingEditPdf
+                        ? <Loader className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
+                        : <Upload className="w-4 h-4 text-slate-500 flex-shrink-0" />}
+                      <span className="text-xs text-slate-500">
+                        {uploadingEditPdf ? 'Extracting PDF…' : 'Drop a PDF to replace description · or click to browse'}
+                      </span>
+                      <input
+                        ref={editPdfInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => handleEditPdf(e.target.files[0])}
+                      />
+                    </div>
+                  )}
                   <textarea
                     value={draftDesc}
                     onChange={(e) => setDraftDesc(e.target.value)}
@@ -321,15 +403,15 @@ export default function ApplicationDetail() {
                   />
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => saveJobField('description', draftDesc, () => setEditingDesc(false))}
-                      disabled={savingJob}
+                      onClick={saveDescription}
+                      disabled={savingJob || uploadingEditPdf}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-medium hover:bg-cyan-500 disabled:opacity-50 transition-colors"
                     >
                       <Check className="w-3 h-3" />
                       {savingJob ? 'Saving…' : 'Save'}
                     </button>
                     <button
-                      onClick={() => setEditingDesc(false)}
+                      onClick={() => { setEditingDesc(false); setEditPdfPath(null); setEditPdfName(''); }}
                       className="text-xs text-slate-400 hover:text-white transition-colors"
                     >
                       Cancel

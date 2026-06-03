@@ -162,7 +162,7 @@ export const getJob = async (req, res) => {
 };
 
 export const updateJob = async (req, res) => {
-  const { postingDate, title, company, description } = req.body;
+  const { postingDate, title, company, description, pdfPath } = req.body;
   const { data: existing } = await supabase
     .from('jobs')
     .select('id')
@@ -177,6 +177,7 @@ export const updateJob = async (req, res) => {
   if (title        !== undefined && title.trim())       updates.title       = title.trim();
   if (company      !== undefined && company.trim())     updates.company     = company.trim();
   if (description  !== undefined && description.trim()) updates.description = description.trim();
+  if (pdfPath      !== undefined)                       updates.pdf_path    = pdfPath || null;
 
   const { data, error } = await supabase
     .from('jobs')
